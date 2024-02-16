@@ -54,6 +54,10 @@ func LoadConfigFile(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse configuration: %w", err)
 	}
 
+	if _, err := cnfg.UnmarshalENV(config, "FW"); err != nil {
+		return nil, fmt.Errorf("failed to parse environment: %w", err)
+	}
+
 	return config, nil
 }
 
