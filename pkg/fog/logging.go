@@ -8,10 +8,13 @@ import (
 	"golift.io/rotatorr/timerotator"
 )
 
+const (
+	logFileMode = 0o644
+	megabyte    = 1024 * 1024
+)
+
 // SetupLogs starts the logs rotation and sets logger output to the configured file(s).
 // You must call this before calling Start to setup logs, or things will panic.
-//
-//nolint:gomnd
 func (c *Config) SetupLogs() {
 	if c.LogFile == "" {
 		c.log = log.New(os.Stderr, "", log.LstdFlags)
@@ -26,8 +29,8 @@ func (c *Config) SetupLogs() {
 
 	rotator = rotatorr.NewMust(&rotatorr.Config{
 		Filepath: c.LogFile,
-		FileSize: int64(c.LogFileMB * 1024 * 1024),
-		FileMode: 0o644,
+		FileSize: int64(c.LogFileMB * megabyte),
+		FileMode: logFileMode,
 		Rotatorr: &timerotator.Layout{
 			FileCount:  int(c.LogFiles),
 			PostRotate: postRotate,
@@ -62,7 +65,8 @@ func (c *Config) PrintConfig() {
 	c.Printf("=> Listen Address: %s", c.ListenAddr)
 	c.Printf("=> Output Path: %s", c.OutputPath)
 	c.Printf("=> Flush Interval: %s", c.FlushInterval)
-	c.Printf("=> Buffers; UDP/Packet/Channel: %d/%d/%d", c.BufferUDP, c.BufferPacket, c.BufferChannel)
+	c.Printf("=> Buffers; UDP/Packet: %d/%d", c.BufferUDP, c.BufferPacket)
+	c.Printf("=> Threads; Listen/Process: %d/%d", c.Listeners, c.Processors)
 
 	if c.LogFile != "" {
 		c.Printf("=> Log File: %s (count: %d, size: %dMB)", c.LogFile, c.LogFiles, c.LogFileMB)

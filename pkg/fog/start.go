@@ -6,47 +6,49 @@ import (
 	"net"
 	"time"
 
+	"github.com/Notifiarr/fogwillow/pkg/willow"
 	"golift.io/cnfg"
 	"golift.io/cnfgfile"
 )
 
 const (
 	DefaultFlushInterval = 16 * time.Second
-	DefaultListenAddr    = ":12345"
+	DefaultGroupInterval = 4 * time.Second
+	DefaultListenAddr    = ":9000"
 	DefaultOutputPath    = "/tmp"
-	DefaultFileMode      = 0o644
-	DefaultDirMode       = 0o755
 	DefaultUDPBuffer     = 1024 * 1024
 	DefaultPacketBuffer  = 1024 * 100
-	DefaultChannelBuffer = 1024 * 10
 )
 
 type Config struct {
-	GroupInterval cnfg.Duration `toml:"group_interval" xml:"group_interval"`
-	FlushInterval cnfg.Duration `toml:"flush_interval" xml:"flush_interval"`
-	OutputPath    string        `toml:"output_path"    xml:"output_path"`
-	ListenAddr    string        `toml:"listen_addr"    xml:"listen_addr"`
-	LogFile       string        `toml:"log_file"       xml:"log_file"`
-	LogFileMB     uint          `toml:"log_file_mb"    xml:"log_file_mb"`
-	LogFiles      uint          `toml:"log_files"      xml:"log_files"`
-	BufferUDP     uint          `toml:"buffer_udp"     xml:"buffer_udp"`
-	BufferPacket  uint          `toml:"buffer_packet"  xml:"buffer_packet"`
-	BufferChannel uint          `toml:"buffer_channel" xml:"buffer_channel"`
-	Debug         bool          `toml:"debug"          xml:"debug"`
-	log           *log.Logger
-	packets       chan *packet
-	sock          *net.UDPConn
+	*willow.Config
+	OutputPath   string `toml:"output_path"    xml:"output_path"`
+	ListenAddr   string `toml:"listen_addr"    xml:"listen_addr"`
+	LogFile      string `toml:"log_file"       xml:"log_file"`
+	LogFileMB    uint   `toml:"log_file_mb"    xml:"log_file_mb"`
+	LogFiles     uint   `toml:"log_files"      xml:"log_files"`
+	BufferUDP    uint   `toml:"buffer_udp"     xml:"buffer_udp"`
+	BufferPacket uint   `toml:"buffer_packet"  xml:"buffer_packet"`
+	Listeners    uint   `toml:"listeners"      xml:"listeners"`
+	Processors   uint   `toml:"processors"     xml:"processors"`
+	Debug        bool   `toml:"debug"          xml:"debug"`
+	log          *log.Logger
+	packets      chan *packet
+	sock         *net.UDPConn
+	willow       *willow.Willow
 }
 
 // LoadConfigFile does what its name implies.
 func LoadConfigFile(path string) (*Config, error) {
 	config := &Config{
-		BufferChannel: DefaultChannelBuffer,
-		BufferPacket:  DefaultPacketBuffer,
-		BufferUDP:     DefaultUDPBuffer,
-		FlushInterval: cnfg.Duration{Duration: DefaultFlushInterval},
-		OutputPath:    DefaultOutputPath,
-		ListenAddr:    DefaultListenAddr,
+		BufferPacket: DefaultPacketBuffer,
+		BufferUDP:    DefaultUDPBuffer,
+		OutputPath:   DefaultOutputPath,
+		ListenAddr:   DefaultListenAddr,
+		Config: &willow.Config{
+			GroupInterval: cnfg.Duration{Duration: DefaultGroupInterval},
+			FlushInterval: cnfg.Duration{Duration: DefaultFlushInterval},
+		},
 	}
 	defer config.setup()
 
@@ -66,8 +68,15 @@ func (c *Config) Start() error {
 		return err
 	}
 
-	go c.packetListener()
-	go c.packetReader()
+	c.willow.Start()
+
+	for i := uint(0); i < c.Processors; i++ {
+		go c.packetProcessor(i + 1)
+	}
+
+	for i := uint(0); i < c.Listeners; i++ {
+		go c.packetListener(i + 1)
+	}
 
 	return nil
 }
@@ -76,15 +85,24 @@ func (c *Config) Start() error {
 func (c *Config) setup() {
 	const divideBy = 4
 
-	if c.GroupInterval.Duration == 0 {
+	if c.FlushInterval.Duration <= 0 {
+		c.FlushInterval.Duration = DefaultFlushInterval
+	}
+
+	if c.GroupInterval.Duration <= 0 {
 		c.GroupInterval.Duration = c.FlushInterval.Duration / divideBy
 	}
 
-	if c.BufferChannel == 0 {
-		c.BufferChannel = DefaultChannelBuffer
+	if c.Processors < 1 {
+		c.Processors = 1
 	}
 
-	c.packets = make(chan *packet, c.BufferChannel)
+	if c.Listeners < 1 {
+		c.Listeners = 1
+	}
+
+	c.packets = make(chan *packet, 1)
+	c.willow = willow.NeWillow(c.Config)
 }
 
 func (c *Config) setupSocket() error {
@@ -107,4 +125,5 @@ func (c *Config) setupSocket() error {
 func (c *Config) Shutdown() {
 	c.sock.Close()
 	close(c.packets)
+	c.willow.Stop()
 }
