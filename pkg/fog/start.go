@@ -12,7 +12,7 @@ import (
 
 const (
 	DefaultFlushInterval = 16 * time.Second
-	DefaultListenAddr    = ":23780"
+	DefaultListenAddr    = ":12345"
 	DefaultOutputPath    = "/tmp"
 	DefaultFileMode      = 0o644
 	DefaultDirMode       = 0o755
