@@ -70,7 +70,7 @@ func (p *packet) Handler(config *Config, memory *willow.Willow) {
 	}
 
 	// Combine our base path with the filename path provided in the packet.
-	filePath := filepath.Join(config.OutputPath, settings["filepath"])
+	filePath := filepath.Join(config.OutputPath, strings.TrimPrefix(settings["filepath"], config.OutputPath))
 	fileBuffer := memory.Get(filePath)
 
 	if fileBuffer == nil {

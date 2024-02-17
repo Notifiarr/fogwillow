@@ -65,7 +65,7 @@ func (c *Config) PrintConfig() {
 	c.Printf("=> Listen Address: %s", c.ListenAddr)
 	c.Printf("=> Output Path: %s", c.OutputPath)
 	c.Printf("=> Flush Interval: %s", c.FlushInterval)
-	c.Printf("=> Buffers; UDP/Packet: %d/%d", c.BufferUDP, c.BufferPacket)
+	c.Printf("=> Buffers; UDP/Packet/Chan: %d/%d/%d", c.BufferUDP, c.BufferPacket, c.BufferChan)
 	c.Printf("=> Threads; Listen/Process: %d/%d", c.Listeners, c.Processors)
 
 	if c.LogFile != "" {
