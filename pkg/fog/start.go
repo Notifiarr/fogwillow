@@ -29,6 +29,7 @@ type Config struct {
 	LogFiles     uint   `toml:"log_files"     xml:"log_files"`
 	BufferUDP    uint   `toml:"buffer_udp"    xml:"buffer_udp"`
 	BufferPacket uint   `toml:"buffer_packet" xml:"buffer_packet"`
+	BufferChan   uint   `toml:"buffer_chan"   xml:"buffer_chan"`
 	Listeners    uint   `toml:"listeners"     xml:"listeners"`
 	Processors   uint   `toml:"processors"    xml:"processors"`
 	Debug        bool   `toml:"debug"         xml:"debug"`
@@ -101,7 +102,7 @@ func (c *Config) setup() {
 		c.Listeners = 1
 	}
 
-	c.packets = make(chan *packet, 1)
+	c.packets = make(chan *packet, c.BufferChan)
 	c.willow = willow.NeWillow(c.Config)
 }
 
