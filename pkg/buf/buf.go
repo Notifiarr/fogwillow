@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	FileMode = 0o644
+	FileMode = 0o664
 	DirMode  = 0o755
 )
 
@@ -48,20 +48,27 @@ func NewBuffer(path string, data []byte, logger Logger) *FileBuffer {
 }
 
 // Write sends content to the file buffer and increments the write counter.
+// We added a mutex that makes this thread safe.
 func (f *FileBuffer) Write(p []byte) (int, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.writes++
 
-	return f.buf.Write(p)
+	return f.buf.Write(p) //nolint:wrapcheck
 }
 
 func (f *FileBuffer) Len() int {
 	return f.buf.Len()
 }
 
+// FlusOpts allows passing data into the file flusher.
+type FlusOpts struct {
+	// Delete the file contents before writing?
+	Truncate bool
+}
+
 // Flush writes the file buffer to disk.
-func (f *FileBuffer) Flush() {
+func (f *FileBuffer) Flush(opts FlusOpts) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -70,7 +77,12 @@ func (f *FileBuffer) Flush() {
 		f.Errorf("Creating dir for %s: %v", f.Path, err)
 	}
 
-	file, err := os.OpenFile(f.Path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, FileMode)
+	fileFlag := os.O_APPEND | os.O_CREATE | os.O_WRONLY
+	if opts.Truncate {
+		fileFlag = os.O_TRUNC | os.O_CREATE | os.O_WRONLY
+	}
+
+	file, err := os.OpenFile(f.Path, fileFlag, FileMode)
 	if err != nil {
 		f.Errorf("Opening or creating file %s: %v", f.Path, err)
 		return

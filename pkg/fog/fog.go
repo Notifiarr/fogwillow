@@ -17,7 +17,7 @@ type packet struct {
 	data  []byte
 	size  int
 	addr  *net.UDPAddr
-	count uint
+	count uint64
 }
 
 // packetListener gets raw packets from the UDP socket and sends them to another go routine.
@@ -26,7 +26,7 @@ func (c *Config) packetListener(idx uint) {
 
 	var err error
 
-	for count := uint(0); ; count++ {
+	for count := uint64(0); ; count++ {
 		packet := &packet{data: make([]byte, c.BufferPacket), count: count}
 
 		packet.size, packet.addr, err = c.sock.ReadFromUDP(packet.data)
@@ -82,9 +82,9 @@ func (p *packet) Handler(config *Config, memory *willow.Willow) {
 		config.Errorf("Adding %d bytes to buffer (%d) for %s", p.size, fileBuffer.Len(), filePath)
 	}
 
-	if settings["flush"] == "true" {
-		fileBuffer.Flush()      // write to disk
-		memory.Delete(filePath) // remove from memory
+	if trunc := settings["truncate"] == "true"; trunc || settings["flush"] == "true" {
+		fileBuffer.Flush(buf.FlusOpts{Truncate: trunc}) // write to disk
+		memory.Delete(filePath)                         // remove from memory
 	}
 }
 

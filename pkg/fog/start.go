@@ -22,16 +22,16 @@ const (
 
 type Config struct {
 	*willow.Config
-	OutputPath   string `toml:"output_path"    xml:"output_path"`
-	ListenAddr   string `toml:"listen_addr"    xml:"listen_addr"`
-	LogFile      string `toml:"log_file"       xml:"log_file"`
-	LogFileMB    uint   `toml:"log_file_mb"    xml:"log_file_mb"`
-	LogFiles     uint   `toml:"log_files"      xml:"log_files"`
-	BufferUDP    uint   `toml:"buffer_udp"     xml:"buffer_udp"`
-	BufferPacket uint   `toml:"buffer_packet"  xml:"buffer_packet"`
-	Listeners    uint   `toml:"listeners"      xml:"listeners"`
-	Processors   uint   `toml:"processors"     xml:"processors"`
-	Debug        bool   `toml:"debug"          xml:"debug"`
+	OutputPath   string `toml:"output_path"   xml:"output_path"`
+	ListenAddr   string `toml:"listen_addr"   xml:"listen_addr"`
+	LogFile      string `toml:"log_file"      xml:"log_file"`
+	LogFileMB    uint   `toml:"log_file_mb"   xml:"log_file_mb"`
+	LogFiles     uint   `toml:"log_files"     xml:"log_files"`
+	BufferUDP    uint   `toml:"buffer_udp"    xml:"buffer_udp"`
+	BufferPacket uint   `toml:"buffer_packet" xml:"buffer_packet"`
+	Listeners    uint   `toml:"listeners"     xml:"listeners"`
+	Processors   uint   `toml:"processors"    xml:"processors"`
+	Debug        bool   `toml:"debug"         xml:"debug"`
 	log          *log.Logger
 	packets      chan *packet
 	sock         *net.UDPConn
