@@ -17,11 +17,12 @@ const (
 	DefaultListenAddr    = ":9000"
 	DefaultOutputPath    = "/tmp"
 	DefaultUDPBuffer     = 1024 * 1024
-	DefaultPacketBuffer  = 1024 * 100
+	DefaultPacketBuffer  = 1024 * 8
 )
 
 type Config struct {
 	*willow.Config
+	Password     string `toml:"password"      xml:"password"`
 	OutputPath   string `toml:"output_path"   xml:"output_path"`
 	ListenAddr   string `toml:"listen_addr"   xml:"listen_addr"`
 	LogFile      string `toml:"log_file"      xml:"log_file"`

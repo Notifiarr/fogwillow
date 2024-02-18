@@ -67,6 +67,23 @@ type FlusOpts struct {
 	Truncate bool
 }
 
+// RmRfDir deletes the path in the fileBuffer. This is dangerous and destructive.
+func (f *FileBuffer) RmRfDir() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	f.Debugf("Deleting recursively: %s", f.Path)
+
+	start := time.Now()
+
+	if err := os.RemoveAll(f.Path); err != nil {
+		f.Errorf("Deleting path %s: %v", f.Path, err)
+		return
+	}
+
+	f.Printf("Deleted %s in %s", f.Path, time.Since(start))
+}
+
 // Flush writes the file buffer to disk.
 func (f *FileBuffer) Flush(opts FlusOpts) {
 	f.mu.Lock()
