@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -19,15 +18,6 @@ type packet struct {
 	addr  *net.UDPAddr
 	count uint64
 }
-
-// List of settings we recognize from packet parsing.
-const (
-	setPassword = "password"
-	setTruncate = "truncate"
-	setFilepath = "filepath"
-	setDelete   = "delete"
-	setFlush    = "flush"
-)
 
 var (
 	ErrInvalidPacket = fmt.Errorf("invalid packet")
@@ -87,7 +77,7 @@ func (p *packet) Handler(config *Config, memory *willow.Willow) {
 	}
 
 	// Combine our base path with the filename path provided in the packet.
-	filePath := settings[setFilepath].PrefixPath(config.OutputPath)
+	filePath := settings.Filepath(config.OutputPath)
 	fileBuffer := memory.Get(filePath)
 
 	if fileBuffer == nil {
@@ -99,18 +89,21 @@ func (p *packet) Handler(config *Config, memory *willow.Willow) {
 		config.Errorf("Adding %d bytes to buffer (%d) for %s", p.size, fileBuffer.Len(), filePath)
 	}
 
-	if settings[setDelete].True() {
-		go fileBuffer.RmRfDir()
-	} else if trunc := settings[setTruncate].True(); trunc || settings[setFlush].True() {
-		fileBuffer.Flush(buf.FlusOpts{Truncate: trunc}) // write to disk
-		memory.Delete(filePath)                         // remove from memory
+	if settings.Delete() {
+		go fileBuffer.RmRfDir(buf.FlusOpts{FollowUp: func() { memory.Delete(filePath) }})
+	} else if settings.Truncate() || settings.Flush() {
+		go fileBuffer.Flush(buf.FlusOpts{ // write to disk
+			FollowUp: func() { memory.Delete(filePath) }, // remove from memory
+			Truncate: settings.Truncate(),
+			Type:     "eof",
+		})
 	}
 }
 
 // parse the packet into structured data.
 //
 //nolint:gomnd
-func (p *packet) parse() (map[string]setting, []byte, error) {
+func (p *packet) parse() (Settings, []byte, error) {
 	newline := bytes.IndexByte(p.data, '\n')
 	if newline < 0 {
 		return nil, nil, fmt.Errorf("%w from %s (first newline at %d)", ErrInvalidPacket, p.addr.IP, newline)
@@ -123,7 +116,7 @@ func (p *packet) parse() (map[string]setting, []byte, error) {
 			err, p.addr.IP, newline, string(p.data[0:newline]))
 	}
 
-	settings := make(map[string]setting, settingCount)
+	settings := make(Settings, settingCount)
 	lastline := newline + 1 // +1 to remove the \n
 	// Parse each line 1 at a time and add them to the settings map.
 	for ; settingCount > 0; settingCount-- {
@@ -139,7 +132,7 @@ func (p *packet) parse() (map[string]setting, []byte, error) {
 				ErrInvalidPacket, settingCount+len(settings), p.addr.IP, newline, lastline, settingVal[0])
 		}
 		// Set the name and value, increment lastline and repeat.
-		settings[settingVal[0]] = setting(settingVal[1])
+		settings.Set(settingVal[0], settingVal[1])
 		lastline += newline + 1 // +1 to remove the \n
 	}
 
@@ -147,39 +140,15 @@ func (p *packet) parse() (map[string]setting, []byte, error) {
 }
 
 // check the packet for valid settings.
-func (p *packet) check(settings map[string]setting, password string) error {
-	if settings[setFilepath].Empty() {
+func (p *packet) check(settings Settings, confPassword string) error {
+	if !settings.HasFilepath() {
 		return fmt.Errorf("%w from %s with %d settings and no filepath",
 			ErrInvalidPacket, p.addr.IP, len(settings))
 	}
 
-	if password != "" && !settings[setPassword].Equals(password) {
+	if !settings.Password(confPassword) {
 		return fmt.Errorf("%w from %s with %d settings", ErrBadPassword, p.addr.IP, len(settings))
 	}
 
 	return nil
-}
-
-// setting lets us bind cool methods to our string settings.
-type setting string
-
-// PrefixPath trims and appends a root path to a setting path.
-// Only really useful for the 'filepath' setting.
-func (s setting) PrefixPath(path string) string {
-	return filepath.Join(path, strings.TrimPrefix(string(s), path))
-}
-
-// Equals returns true if the setting is equal to this value.
-func (s setting) Equals(value string) bool {
-	return string(s) == value
-}
-
-// True returns true if the setting is a "true" string.
-func (s setting) True() bool {
-	return string(s) == "true"
-}
-
-// Empty returns true if the setting is blank or nonexistent.
-func (s setting) Empty() bool {
-	return string(s) == ""
 }

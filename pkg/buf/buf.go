@@ -63,14 +63,22 @@ func (f *FileBuffer) Len() int {
 
 // FlusOpts allows passing data into the file flusher.
 type FlusOpts struct {
+	// Type is arbitrary data that probably just gets logged.
+	Type string
 	// Delete the file contents before writing?
 	Truncate bool
+	// FollowUp is run after the end of a deletion or flush.
+	FollowUp func()
 }
 
 // RmRfDir deletes the path in the fileBuffer. This is dangerous and destructive.
-func (f *FileBuffer) RmRfDir() {
+func (f *FileBuffer) RmRfDir(opts FlusOpts) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+
+	if opts.FollowUp != nil {
+		defer opts.FollowUp()
+	}
 
 	f.Debugf("Deleting recursively: %s", f.Path)
 
@@ -89,14 +97,18 @@ func (f *FileBuffer) Flush(opts FlusOpts) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
+	if opts.FollowUp != nil {
+		defer opts.FollowUp()
+	}
+
 	if err := os.MkdirAll(filepath.Dir(f.Path), DirMode); err != nil {
 		// We could return here, but let's try to write the file anyway?
 		f.Errorf("Creating dir for %s: %v", f.Path, err)
 	}
 
-	fileFlag := os.O_APPEND | os.O_CREATE | os.O_WRONLY
+	word, fileFlag := "Wrote", os.O_APPEND|os.O_CREATE|os.O_WRONLY
 	if opts.Truncate {
-		fileFlag = os.O_TRUNC | os.O_CREATE | os.O_WRONLY
+		word, fileFlag = "Truncated", os.O_TRUNC|os.O_CREATE|os.O_WRONLY
 	}
 
 	file, err := os.OpenFile(f.Path, fileFlag, FileMode)
@@ -113,5 +125,5 @@ func (f *FileBuffer) Flush(opts FlusOpts) {
 		f.Errorf("Writing file '%s' content: %v", f.Path, err)
 	}
 
-	f.Printf("Wrote %d bytes (%d lines) to '%s'", size, f.writes, f.Path)
+	f.Printf("%s (%s) %d bytes (%d lines) to '%s'", word, opts.Type, size, f.writes, f.Path)
 }

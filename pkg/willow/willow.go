@@ -110,7 +110,6 @@ func (w *Willow) washer(now time.Time) {
 			continue
 		}
 
-		go file.Flush(buf.FlusOpts{})
-		delete(w.memory, path)
+		go file.Flush(buf.FlusOpts{Type: "exp", FollowUp: func() { w.Delete(path) }})
 	}
 }

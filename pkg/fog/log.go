@@ -8,6 +8,8 @@ import (
 	"golift.io/rotatorr/timerotator"
 )
 
+// This file is for the fogwillow log file. Not logs it processes from the network.
+
 const (
 	logFileMode = 0o644
 	megabyte    = 1024 * 1024
