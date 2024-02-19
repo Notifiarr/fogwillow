@@ -34,7 +34,7 @@ func (c *Config) packetListener(idx uint) {
 		packet.size, packet.addr, err = c.sock.ReadFromUDP(packet.data)
 		if errors.Is(err, net.ErrClosed) {
 			// This happens on normal shutdown.
-			c.Printf("Closing UDP packet listener %d: %v", idx, err)
+			c.Printf("Closing UDP packet listener %d.", idx)
 			return
 		} else if err != nil {
 			// This is probably rare.
@@ -53,7 +53,7 @@ func (c *Config) packetListener(idx uint) {
 // This procedure launches the packet handler.
 func (c *Config) packetProcessor(idx uint) {
 	c.Printf("Starting UDP packet processor %d.", idx)
-	defer c.Printf("Closing UDP packet listener %d.", idx)
+	defer c.Printf("Closing UDP packet processor %d.", idx)
 
 	for packet := range c.packets {
 		c.metrics.Packets.Inc()

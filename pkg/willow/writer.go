@@ -39,8 +39,11 @@ func (w *Willow) stopSystemWriter() {
 }
 
 // fileSystemWriter runs in 1 or more go routines to write files to the file system.
-func (w *Willow) fileSystemWriter() {
+func (w *Willow) fileSystemWriter(idx uint) {
+	w.config.Printf("Starting file system writer %d.", idx)
+
 	defer func() { // Signal Stop() we're done.
+		w.config.Printf("Closing file system writer %d.", idx)
 		w.fsDone <- struct{}{}
 	}()
 
@@ -48,7 +51,7 @@ func (w *Willow) fileSystemWriter() {
 
 	for file := range w.fsOp {
 		if file.delete {
-			file.RmRfDir(file.FlusOpts)
+			file.RmRfDir()
 			continue
 		}
 

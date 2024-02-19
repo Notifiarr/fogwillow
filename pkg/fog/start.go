@@ -56,7 +56,6 @@ func LoadConfigFile(path string) (*Config, error) {
 		BufferPacket: DefaultPacketBuffer,
 		BufferChan:   DefaultChanBuffer,
 	}
-	defer config.setup()
 
 	if err := cnfgfile.Unmarshal(config, path); err != nil {
 		return nil, fmt.Errorf("failed to parse configuration: %w", err)
@@ -65,6 +64,10 @@ func LoadConfigFile(path string) (*Config, error) {
 	if _, err := cnfg.UnmarshalENV(config, "FW"); err != nil {
 		return nil, fmt.Errorf("failed to parse environment: %w", err)
 	}
+
+	config.setup()
+	config.setupLogs()
+	config.printConfig()
 
 	return config, nil
 }
@@ -77,12 +80,12 @@ func (c *Config) Start() error {
 
 	c.willow.Start()
 
-	for i := uint(0); i < c.Processors; i++ {
-		go c.packetProcessor(i + 1)
+	for i := c.Processors; i > 0; i-- {
+		go c.packetProcessor(i)
 	}
 
-	for i := uint(0); i < c.Listeners; i++ {
-		go c.packetListener(i + 1)
+	for i := c.Listeners; i > 0; i-- {
+		go c.packetListener(i)
 	}
 
 	smx := http.NewServeMux()
@@ -117,6 +120,7 @@ func (c *Config) setup() {
 
 	c.packets = make(chan *packet, c.BufferChan)
 	c.metrics = getMetrics(c)
+	c.Config.Logger = c
 	c.Config.Expires = c.metrics.Expires.Inc
 	c.Config.IncFiles = c.metrics.Files.Inc
 	c.Config.AddBytes = c.metrics.Bytes.Add

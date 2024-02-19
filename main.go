@@ -20,14 +20,13 @@ func main() {
 		log.Fatalf("Config File Error: %s", err)
 	}
 
-	fog.SetupLogs()
-	fog.PrintConfig()
-
 	go catchSignal(fog)
 
 	if err := fog.Start(); err != nil {
 		log.Fatalf("Starting Fog Failed: %v", err)
 	}
+
+	fog.Printf("Done. Good bye!")
 }
 
 func catchSignal(fog *fog.Config) {

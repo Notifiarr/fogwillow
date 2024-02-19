@@ -25,9 +25,10 @@ type Config struct {
 	// How many threads to run for file system changes.
 	Writers uint `toml:"writers" xml:"writers"`
 	// These allow this module to produce metrics.
-	Expires  func()              `toml:"-" xml:"-"`
-	AddBytes func(bytes float64) `toml:"-" xml:"-"`
-	IncFiles func()              `toml:"-" xml:"-"`
+	Expires    func()              `toml:"-" xml:"-"`
+	AddBytes   func(bytes float64) `toml:"-" xml:"-"`
+	IncFiles   func()              `toml:"-" xml:"-"`
+	buf.Logger `toml:"-" xml:"-"`
 }
 
 // Willow is the working struct for this module. Get one from, NeWillow().
@@ -99,7 +100,7 @@ func (c *Config) setup() {
 // Start begins the willow memory hole processor.
 func (w *Willow) Start() {
 	for i := w.config.Writers; i > 0; i-- {
-		go w.fileSystemWriter()
+		go w.fileSystemWriter(i)
 	}
 
 	go w.memoryHole()

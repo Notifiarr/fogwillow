@@ -67,18 +67,12 @@ type FlusOpts struct {
 	Type string
 	// Delete the file contents before writing?
 	Truncate bool
-	// FollowUp is run after the end of a deletion or flush.
-	FollowUp func()
 }
 
 // RmRfDir deletes the path in the fileBuffer. This is dangerous and destructive.
-func (f *FileBuffer) RmRfDir(opts FlusOpts) {
+func (f *FileBuffer) RmRfDir() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-
-	if opts.FollowUp != nil {
-		defer opts.FollowUp()
-	}
 
 	f.Debugf("Deleting recursively: %s", f.Path)
 
@@ -96,10 +90,6 @@ func (f *FileBuffer) RmRfDir(opts FlusOpts) {
 func (f *FileBuffer) Flush(opts FlusOpts) int {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-
-	if opts.FollowUp != nil {
-		defer opts.FollowUp()
-	}
 
 	if err := os.MkdirAll(filepath.Dir(f.Path), DirMode); err != nil {
 		// We could return here, but let's try to write the file anyway?
@@ -125,7 +115,8 @@ func (f *FileBuffer) Flush(opts FlusOpts) int {
 		f.Errorf("Writing file '%s' content: %v", f.Path, err)
 	}
 
-	f.Printf("%s (%s) %d bytes (%d writes) to '%s'", word, opts.Type, size, f.writes, f.Path)
+	f.Printf("%s (%s) %d bytes (%d writes, age: %s) to '%s'",
+		word, opts.Type, size, f.writes, time.Since(f.FirstWrite.Round(time.Second)), f.Path)
 
 	return size
 }

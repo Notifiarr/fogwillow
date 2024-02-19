@@ -15,9 +15,8 @@ const (
 	megabyte    = 1024 * 1024
 )
 
-// SetupLogs starts the logs rotation and sets logger output to the configured file(s).
-// You must call this before calling Start to setup logs, or things will panic.
-func (c *Config) SetupLogs() {
+// setupLogs starts the logs rotation and sets logger output to the configured file(s).
+func (c *Config) setupLogs() {
 	if c.LogFile == "" {
 		c.log = log.New(os.Stderr, "", log.LstdFlags)
 		return
@@ -62,8 +61,8 @@ func (c *Config) Errorf(msg string, v ...interface{}) {
 	c.log.Printf("[ERROR] "+msg, v...)
 }
 
-// PrintConfig logs the current configuration information.
-func (c *Config) PrintConfig() {
+// printConfig logs the current configuration information.
+func (c *Config) printConfig() {
 	c.Printf("=> Fog Willow Starting, pid: %d", os.Getpid())
 	c.Printf("=> Listen Address / Password: %s / %v", c.ListenAddr, c.Password != "")
 	c.Printf("=> Output Path: %s", c.OutputPath)

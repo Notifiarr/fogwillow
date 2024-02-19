@@ -29,12 +29,14 @@ func (w *Willow) Delete(path string) {
 
 // memoryHole runs in a single go routine, so keep it lean.
 func (w *Willow) memoryHole() {
-	defer close(w.repCh) // signal Stop() we are done.
-
 	groups := time.NewTicker(w.config.GroupInterval.Duration)
-	defer groups.Stop()
-	// Clear out all the files when we exit.
-	defer w.washer(time.Time{}, true)
+
+	defer func() {
+		w.config.Printf("Writing %d files before exit.", len(w.memory))
+		w.washer(time.Time{}, true) // Clear out all the files when we exit.
+		groups.Stop()
+		close(w.repCh) // signal Stop() we are done.
+	}()
 
 	for {
 		select {
