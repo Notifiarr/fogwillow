@@ -67,7 +67,7 @@ func (c *Config) PrintConfig() {
 	c.Printf("=> Fogwillow Starting, pid: %d", os.Getpid())
 	c.Printf("=> Listen Address: %s", c.ListenAddr)
 	c.Printf("=> Output Path: %s", c.OutputPath)
-	c.Printf("=> Intervals; Flush/Group: %s", c.FlushInterval, c.GroupInterval)
+	c.Printf("=> Intervals; Flush/Group: %s/%s", c.FlushInterval, c.GroupInterval)
 	c.Printf("=> Buffers; UDP/Packet/Chan: %d/%d/%d", c.BufferUDP, c.BufferPacket, c.BufferChan)
 	c.Printf("=> Threads; Listen/Process: %d/%d", c.Listeners, c.Processors)
 

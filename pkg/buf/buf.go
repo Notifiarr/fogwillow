@@ -112,8 +112,6 @@ func (f *FileBuffer) Flush(opts FlusOpts) {
 }
 
 func (f *FileBuffer) flush(opts FlusOpts) {
-	defer IncFiles()
-
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -146,5 +144,6 @@ func (f *FileBuffer) flush(opts FlusOpts) {
 	}
 
 	AddBytes(float64(size))
-	f.Printf("%s (%s) %d bytes (%d lines) to '%s'", word, opts.Type, size, f.writes, f.Path)
+	IncFiles()
+	f.Printf("%s (%s) %d bytes (%d writes) to '%s'", word, opts.Type, size, f.writes, f.Path)
 }

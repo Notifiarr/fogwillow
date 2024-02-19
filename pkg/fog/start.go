@@ -1,13 +1,17 @@
 package fog
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/Notifiarr/fogwillow/pkg/buf"
 	"github.com/Notifiarr/fogwillow/pkg/willow"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golift.io/cnfg"
 	"golift.io/cnfgfile"
 )
@@ -40,6 +44,7 @@ type Config struct {
 	sock         *net.UDPConn
 	willow       *willow.Willow
 	metrics      *Metrics
+	httpSrv      *http.Server
 }
 
 // LoadConfigFile does what its name implies.
@@ -82,6 +87,22 @@ func (c *Config) Start() error {
 		go c.packetListener(i + 1)
 	}
 
+	smx := http.NewServeMux()
+	c.httpSrv = &http.Server{
+		Handler:           smx,
+		Addr:              c.ListenAddr,
+		ReadTimeout:       time.Second,
+		ReadHeaderTimeout: time.Second,
+		WriteTimeout:      time.Second,
+		IdleTimeout:       20 * time.Second,
+	}
+
+	smx.Handle("/metrics", promhttp.Handler())
+	err := c.httpSrv.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+
 	return nil
 }
 
@@ -108,8 +129,8 @@ func (c *Config) setup() {
 	c.packets = make(chan *packet, c.BufferChan)
 	c.metrics = getMetrics(c)
 	c.Config.Expires = c.metrics.Expires.Inc
-	buf.AddBytes = c.metrics.Bytes.Add
 	buf.IncFiles = c.metrics.Files.Inc
+	buf.AddBytes = c.metrics.Bytes.Add
 	c.willow = willow.NeWillow(c.Config)
 }
 
@@ -131,6 +152,10 @@ func (c *Config) setupSocket() error {
 }
 
 func (c *Config) Shutdown() {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	c.httpSrv.Shutdown(ctx)
 	c.sock.Close()
 	close(c.packets)
 	c.willow.Stop()

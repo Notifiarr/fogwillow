@@ -25,11 +25,14 @@ func main() {
 
 	fog.SetupLogs()
 	fog.PrintConfig()
+	go catchSignal(fog)
 
 	if err := fog.Start(); err != nil {
 		log.Fatalf("Starting Fog Failed: %v", err)
 	}
+}
 
+func catchSignal(fog *fog.Config) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	// Wait here for a signal to shut down.
