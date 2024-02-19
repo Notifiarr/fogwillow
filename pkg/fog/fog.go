@@ -13,10 +13,9 @@ import (
 )
 
 type packet struct {
-	data  []byte
-	size  int
-	addr  *net.UDPAddr
-	count uint64
+	data []byte
+	size int
+	addr *net.UDPAddr
 }
 
 var (
@@ -31,7 +30,7 @@ func (c *Config) packetListener(idx uint) {
 	var err error
 
 	for count := uint64(0); ; count++ {
-		packet := &packet{data: make([]byte, c.BufferPacket), count: count}
+		packet := &packet{data: make([]byte, c.BufferPacket)}
 
 		packet.size, packet.addr, err = c.sock.ReadFromUDP(packet.data)
 		if errors.Is(err, net.ErrClosed) {
@@ -45,7 +44,7 @@ func (c *Config) packetListener(idx uint) {
 		}
 
 		c.Debugf("Thread %d got packet %d from %s at %d bytes; buffer: %d/%d",
-			idx, packet.count, packet.addr, packet.size, len(c.packets), cap(c.packets))
+			idx, count, packet.addr, packet.size, len(c.packets), cap(c.packets))
 
 		c.packets <- packet
 	}
@@ -58,6 +57,7 @@ func (c *Config) packetProcessor(idx uint) {
 	defer c.Printf("Closing UDP packet listener %d.", idx)
 
 	for packet := range c.packets {
+		c.metrics.Packets.Inc()
 		packet.Handler(c, c.willow)
 	}
 }
@@ -89,6 +89,8 @@ func (p *packet) Handler(config *Config, memory *willow.Willow) {
 		config.Errorf("Adding %d bytes to buffer (%d) for %s", p.size, fileBuffer.Len(), filePath)
 	}
 
+	p.metrics(config, settings)
+
 	if settings.Delete() {
 		go fileBuffer.RmRfDir(buf.FlusOpts{FollowUp: func() { memory.Delete(filePath) }})
 	} else if settings.Truncate() || settings.Flush() {
@@ -97,6 +99,20 @@ func (p *packet) Handler(config *Config, memory *willow.Willow) {
 			Truncate: settings.Truncate(),
 			Type:     "eof",
 		})
+	}
+}
+
+func (p *packet) metrics(config *Config, settings Settings) {
+	if settings.Delete() {
+		config.metrics.Deletes.Inc()
+	}
+
+	if settings.Truncate() {
+		config.metrics.Truncate.Inc()
+	}
+
+	if settings.Flush() {
+		config.metrics.Flushes.Inc()
 	}
 }
 
@@ -131,8 +147,9 @@ func (p *packet) parse() (Settings, []byte, error) {
 			return nil, nil, fmt.Errorf("%w with %d settings from %s (newline/lastline: %d/%d): setting '%s' missing equal",
 				ErrInvalidPacket, settingCount+len(settings), p.addr.IP, newline, lastline, settingVal[0])
 		}
-		// Set the name and value, increment lastline and repeat.
+		// Set the name and value.
 		settings.Set(settingVal[0], settingVal[1])
+		// Increment lastline and repeat.
 		lastline += newline + 1 // +1 to remove the \n
 	}
 

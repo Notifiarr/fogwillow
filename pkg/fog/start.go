@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/Notifiarr/fogwillow/pkg/buf"
 	"github.com/Notifiarr/fogwillow/pkg/willow"
 	"golift.io/cnfg"
 	"golift.io/cnfgfile"
@@ -38,6 +39,7 @@ type Config struct {
 	packets      chan *packet
 	sock         *net.UDPConn
 	willow       *willow.Willow
+	metrics      *Metrics
 }
 
 // LoadConfigFile does what its name implies.
@@ -104,6 +106,10 @@ func (c *Config) setup() {
 	}
 
 	c.packets = make(chan *packet, c.BufferChan)
+	c.metrics = getMetrics(c)
+	c.Config.Expires = c.metrics.Expires.Inc
+	buf.AddBytes = c.metrics.Bytes.Add
+	buf.IncFiles = c.metrics.Files.Inc
 	c.willow = willow.NeWillow(c.Config)
 }
 

@@ -58,6 +58,7 @@ func (c *Config) Printf(msg string, v ...interface{}) {
 
 // Errorf writes log lines... to stdout and/or a file.
 func (c *Config) Errorf(msg string, v ...interface{}) {
+	c.metrics.Errors.Inc()
 	c.log.Printf("[ERROR] "+msg, v...)
 }
 
@@ -66,7 +67,7 @@ func (c *Config) PrintConfig() {
 	c.Printf("=> Fogwillow Starting, pid: %d", os.Getpid())
 	c.Printf("=> Listen Address: %s", c.ListenAddr)
 	c.Printf("=> Output Path: %s", c.OutputPath)
-	c.Printf("=> Flush Interval: %s", c.FlushInterval)
+	c.Printf("=> Intervals; Flush/Group: %s", c.FlushInterval, c.GroupInterval)
 	c.Printf("=> Buffers; UDP/Packet/Chan: %d/%d/%d", c.BufferUDP, c.BufferPacket, c.BufferChan)
 	c.Printf("=> Threads; Listen/Process: %d/%d", c.Listeners, c.Processors)
 

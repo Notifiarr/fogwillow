@@ -14,6 +14,7 @@ type Config struct {
 	GroupInterval cnfg.Duration `toml:"group_interval" xml:"group_interval"`
 	// How old a file must be to flush it away.
 	FlushInterval cnfg.Duration `toml:"flush_interval" xml:"flush_interval"`
+	Expires       func()
 }
 
 // Willow is the working struct for this module. Get one from, NeWillow().
@@ -27,7 +28,7 @@ type Willow struct {
 }
 
 // initial allocation for the file buffer map.
-const memoryMapSize = 300
+const memoryMapSize = 100
 
 // NeWillow returns a new, configured Willow pointer.
 func NeWillow(config *Config) *Willow {
@@ -60,6 +61,11 @@ func (w *Willow) Stop() {
 
 	close(w.askCh)
 	<-w.repCh
+}
+
+// Len returns the number of file buffers in the map.
+func (w *Willow) Len() int {
+	return len(w.memory)
 }
 
 // Get a FileBuffer by file name.
@@ -108,6 +114,10 @@ func (w *Willow) washer(now time.Time) {
 	for path, file := range w.memory {
 		if now.Sub(file.FirstWrite) < w.config.FlushInterval.Duration {
 			continue
+		}
+
+		if w.config.Expires != nil {
+			w.config.Expires()
 		}
 
 		go file.Flush(buf.FlusOpts{Type: "exp"})
