@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/Notifiarr/fogwillow/pkg/buf"
-	"github.com/Notifiarr/fogwillow/pkg/willow"
 )
 
 type packet struct {
@@ -58,13 +57,13 @@ func (c *Config) packetProcessor(idx uint) {
 
 	for packet := range c.packets {
 		c.metrics.Packets.Inc()
-		packet.Handler(c, c.willow)
+		packet.Handler(c)
 	}
 }
 
 // Handler is invoked by packetListener for every received packet.
 // This is where the packet is parsed and stored into memory for later flushing to disk.
-func (p *packet) Handler(config *Config, memory *willow.Willow) {
+func (p *packet) Handler(config *Config) {
 	settings, body, err := p.parse()
 	if err != nil {
 		config.Errorf("%v", err)
@@ -78,47 +77,36 @@ func (p *packet) Handler(config *Config, memory *willow.Willow) {
 
 	// Combine our base path with the filename path provided in the packet.
 	filePath := settings.Filepath(config.OutputPath)
-	fileBuffer := memory.Get(filePath)
+	fileBuffer := config.willow.Get(filePath)
 
 	if fileBuffer == nil {
 		// Create a new fileBuffer.
 		fileBuffer = buf.NewBuffer(filePath, body, config)
 		// Save the new file buffer in memory.
-		memory.Set(fileBuffer)
+		config.willow.Set(fileBuffer)
 	} else if _, err := fileBuffer.Write(body); err != nil { // Append directly to existing buffer.
 		config.Errorf("Adding %d bytes to buffer (%d) for %s", p.size, fileBuffer.Len(), filePath)
 	}
 
-	p.metrics(config, settings)
-
-	if settings.Delete() {
-		go fileBuffer.RmRfDir(buf.FlusOpts{FollowUp: func() { memory.Delete(filePath) }})
-	} else if settings.Truncate() || settings.Flush() {
-		go fileBuffer.Flush(buf.FlusOpts{ // write to disk
-			FollowUp: func() { memory.Delete(filePath) }, // remove from memory
+	switch {
+	case settings.Delete():
+		config.metrics.Deletes.Inc()
+		config.willow.Delete(filePath)
+		config.willow.RmRfDir(fileBuffer, buf.FlusOpts{})
+	case settings.Truncate():
+		config.metrics.Truncate.Inc()
+		fallthrough
+	case settings.Flush():
+		config.metrics.Flushes.Inc()
+		config.willow.Delete(filePath)                // remove from memory
+		config.willow.Flush(fileBuffer, buf.FlusOpts{ // write to disk
 			Truncate: settings.Truncate(),
 			Type:     "eof",
 		})
 	}
 }
 
-func (p *packet) metrics(config *Config, settings Settings) {
-	if settings.Delete() {
-		config.metrics.Deletes.Inc()
-	}
-
-	if settings.Truncate() {
-		config.metrics.Truncate.Inc()
-	}
-
-	if settings.Flush() {
-		config.metrics.Flushes.Inc()
-	}
-}
-
 // parse the packet into structured data.
-//
-//nolint:gomnd
 func (p *packet) parse() (Settings, []byte, error) {
 	newline := bytes.IndexByte(p.data, '\n')
 	if newline < 0 {
@@ -142,8 +130,8 @@ func (p *packet) parse() (Settings, []byte, error) {
 				ErrInvalidPacket, settingCount+len(settings), p.addr.IP, newline, lastline)
 		}
 		// Split the setting line on = to get name and value.
-		settingVal := strings.SplitN(string(p.data[lastline:newline+lastline]), "=", 2)
-		if len(settingVal) != 2 {
+		settingVal := strings.SplitN(string(p.data[lastline:newline+lastline]), "=", 2) //nolint:gomnd
+		if len(settingVal) != 2 {                                                       //nolint:gomnd
 			return nil, nil, fmt.Errorf("%w with %d settings from %s (newline/lastline: %d/%d): setting '%s' missing equal",
 				ErrInvalidPacket, settingCount+len(settings), p.addr.IP, newline, lastline, settingVal[0])
 		}

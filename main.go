@@ -6,12 +6,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/Notifiarr/fogwillow/pkg/fog"
 )
-
-const shutdownWait = 100 * time.Millisecond
 
 func main() {
 	configFile := flag.String("config", "/config/fog.conf", "config file path")
@@ -25,6 +22,7 @@ func main() {
 
 	fog.SetupLogs()
 	fog.PrintConfig()
+
 	go catchSignal(fog)
 
 	if err := fog.Start(); err != nil {
@@ -37,6 +35,8 @@ func catchSignal(fog *fog.Config) {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	// Wait here for a signal to shut down.
 	fog.Printf("Shutting down! Caught signal: %s", <-sigCh)
-	fog.Shutdown()
-	time.Sleep(shutdownWait)
+
+	if err := fog.Shutdown(); err != nil {
+		log.Fatalf("Stopping Fog Failed: %v", err)
+	}
 }

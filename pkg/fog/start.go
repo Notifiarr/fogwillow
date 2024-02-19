@@ -9,22 +9,22 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Notifiarr/fogwillow/pkg/buf"
 	"github.com/Notifiarr/fogwillow/pkg/willow"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golift.io/cnfg"
 	"golift.io/cnfgfile"
 )
 
+// Some application defaults.
 const (
-	DefaultFlushInterval = 16 * time.Second
-	DefaultGroupInterval = 4 * time.Second
-	DefaultListenAddr    = ":9000"
-	DefaultOutputPath    = "/tmp"
-	DefaultUDPBuffer     = 1024 * 1024
-	DefaultPacketBuffer  = 1024 * 8
+	DefaultOutputPath   = "/tmp"
+	DefaultListenAddr   = ":9000"
+	DefaultUDPBuffer    = 1024 * 1024
+	DefaultPacketBuffer = 1024 * 8
+	DefaultChanBuffer   = 1024 * 10
 )
 
+// Config is the input _and_ running data.
 type Config struct {
 	*willow.Config
 	Password     string `toml:"password"      xml:"password"`
@@ -50,14 +50,11 @@ type Config struct {
 // LoadConfigFile does what its name implies.
 func LoadConfigFile(path string) (*Config, error) {
 	config := &Config{
-		BufferPacket: DefaultPacketBuffer,
-		BufferUDP:    DefaultUDPBuffer,
 		OutputPath:   DefaultOutputPath,
 		ListenAddr:   DefaultListenAddr,
-		Config: &willow.Config{
-			GroupInterval: cnfg.Duration{Duration: DefaultGroupInterval},
-			FlushInterval: cnfg.Duration{Duration: DefaultFlushInterval},
-		},
+		BufferUDP:    DefaultUDPBuffer,
+		BufferPacket: DefaultPacketBuffer,
+		BufferChan:   DefaultChanBuffer,
 	}
 	defer config.setup()
 
@@ -72,6 +69,7 @@ func LoadConfigFile(path string) (*Config, error) {
 	return config, nil
 }
 
+// Start the applications.
 func (c *Config) Start() error {
 	if err := c.setupSocket(); err != nil {
 		return err
@@ -88,19 +86,20 @@ func (c *Config) Start() error {
 	}
 
 	smx := http.NewServeMux()
+	smx.Handle("/metrics", promhttp.Handler())
+
 	c.httpSrv = &http.Server{
 		Handler:           smx,
 		Addr:              c.ListenAddr,
 		ReadTimeout:       time.Second,
 		ReadHeaderTimeout: time.Second,
 		WriteTimeout:      time.Second,
-		IdleTimeout:       20 * time.Second,
+		IdleTimeout:       20 * time.Second, //nolint:gomnd
 	}
 
-	smx.Handle("/metrics", promhttp.Handler())
 	err := c.httpSrv.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return err
+		return fmt.Errorf("web server failed: %w", err)
 	}
 
 	return nil
@@ -108,16 +107,6 @@ func (c *Config) Start() error {
 
 // setup makes sure configurations are sound and sane.
 func (c *Config) setup() {
-	const divideBy = 4
-
-	if c.FlushInterval.Duration <= 0 {
-		c.FlushInterval.Duration = DefaultFlushInterval
-	}
-
-	if c.GroupInterval.Duration <= 0 {
-		c.GroupInterval.Duration = c.FlushInterval.Duration / divideBy
-	}
-
 	if c.Processors < 1 {
 		c.Processors = 1
 	}
@@ -129,8 +118,8 @@ func (c *Config) setup() {
 	c.packets = make(chan *packet, c.BufferChan)
 	c.metrics = getMetrics(c)
 	c.Config.Expires = c.metrics.Expires.Inc
-	buf.IncFiles = c.metrics.Files.Inc
-	buf.AddBytes = c.metrics.Bytes.Add
+	c.Config.IncFiles = c.metrics.Files.Inc
+	c.Config.AddBytes = c.metrics.Bytes.Add
 	c.willow = willow.NeWillow(c.Config)
 }
 
@@ -151,12 +140,16 @@ func (c *Config) setupSocket() error {
 	return nil
 }
 
-func (c *Config) Shutdown() {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	c.httpSrv.Shutdown(ctx)
+// Shutdown stops the application.
+func (c *Config) Shutdown() error {
+	// Stop accepting packets.
 	c.sock.Close()
 	close(c.packets)
+	// Flush all file buffers to disk.
 	c.willow.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	// This stops the main loop and the program exits.
+	return c.httpSrv.Shutdown(ctx) //nolint:wrapcheck
 }

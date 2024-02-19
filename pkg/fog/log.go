@@ -64,16 +64,16 @@ func (c *Config) Errorf(msg string, v ...interface{}) {
 
 // PrintConfig logs the current configuration information.
 func (c *Config) PrintConfig() {
-	c.Printf("=> Fogwillow Starting, pid: %d", os.Getpid())
-	c.Printf("=> Listen Address: %s", c.ListenAddr)
+	c.Printf("=> Fog Willow Starting, pid: %d", os.Getpid())
+	c.Printf("=> Listen Address / Password: %s / %v", c.ListenAddr, c.Password != "")
 	c.Printf("=> Output Path: %s", c.OutputPath)
 	c.Printf("=> Intervals; Flush/Group: %s/%s", c.FlushInterval, c.GroupInterval)
-	c.Printf("=> Buffers; UDP/Packet/Chan: %d/%d/%d", c.BufferUDP, c.BufferPacket, c.BufferChan)
-	c.Printf("=> Threads; Listen/Process: %d/%d", c.Listeners, c.Processors)
+	c.Printf("=> Buffers; UDP/Packet/Chan/FS: %d/%d/%d/%d", c.BufferUDP, c.BufferPacket, c.BufferChan, c.BufferFileSys)
+	c.Printf("=> Threads; Listen/Process/Writer: %d/%d/%d", c.Listeners, c.Processors, c.Writers)
 
 	if c.LogFile != "" {
-		c.Printf("=> Log File: %s (count: %d, size: %dMB)", c.LogFile, c.LogFiles, c.LogFileMB)
+		c.Printf("=> Log File: %s (count: %d, size: %dMB), debug: %v", c.LogFile, c.LogFiles, c.LogFileMB, c.Debug)
 	} else {
-		c.Printf("=> No Log File")
+		c.Printf("=> No Log File, debug: %v", c.Debug)
 	}
 }

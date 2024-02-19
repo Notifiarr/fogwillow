@@ -15,14 +15,6 @@ const (
 	DirMode  = 0o755
 )
 
-// These are used for metrics output. Set them if you use them!
-//
-//nolint:gochecknoglobals
-var (
-	AddBytes = func(bytes float64) {}
-	IncFiles = func() {}
-)
-
 // FileBuffer holds a file before it gets flushed to disk.
 type FileBuffer struct {
 	Logger
@@ -77,16 +69,10 @@ type FlusOpts struct {
 	Truncate bool
 	// FollowUp is run after the end of a deletion or flush.
 	FollowUp func()
-	delete   bool
 }
 
 // RmRfDir deletes the path in the fileBuffer. This is dangerous and destructive.
 func (f *FileBuffer) RmRfDir(opts FlusOpts) {
-	opts.delete = true
-	f.rmRfDir(opts)
-}
-
-func (f *FileBuffer) rmRfDir(opts FlusOpts) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -107,11 +93,7 @@ func (f *FileBuffer) rmRfDir(opts FlusOpts) {
 }
 
 // Flush writes the file buffer to disk.
-func (f *FileBuffer) Flush(opts FlusOpts) {
-	f.flush(opts)
-}
-
-func (f *FileBuffer) flush(opts FlusOpts) {
+func (f *FileBuffer) Flush(opts FlusOpts) int {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -132,7 +114,7 @@ func (f *FileBuffer) flush(opts FlusOpts) {
 	file, err := os.OpenFile(f.Path, fileFlag, FileMode)
 	if err != nil {
 		f.Errorf("Opening or creating file %s: %v", f.Path, err)
-		return
+		return 0
 	}
 	defer file.Close()
 
@@ -143,7 +125,7 @@ func (f *FileBuffer) flush(opts FlusOpts) {
 		f.Errorf("Writing file '%s' content: %v", f.Path, err)
 	}
 
-	AddBytes(float64(size))
-	IncFiles()
 	f.Printf("%s (%s) %d bytes (%d writes) to '%s'", word, opts.Type, size, f.writes, f.Path)
+
+	return size
 }

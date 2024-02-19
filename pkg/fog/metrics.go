@@ -12,7 +12,7 @@ type Metrics struct {
 	Uptime   prometheus.CounterFunc
 	InMemory prometheus.GaugeFunc // File buffers currently stored in memory.
 	ChanBuff prometheus.GaugeFunc // Size of the buffer between the packet reader and packet processor.
-	FileBuff prometheus.Gauge     // Size of the file system change channel buffer. // XXX: no buffer yet
+	FileBuff prometheus.GaugeFunc // Size of the file system change channel buffer.
 	Packets  prometheus.Counter   // UDP packets received.
 	Files    prometheus.Counter   // Number of files flushed and written to disk.
 	Bytes    prometheus.Counter   // Number of bytes written to disk.
@@ -39,10 +39,10 @@ func getMetrics(config *Config) *Metrics {
 			Name: "fogwillow_packet_processor_buffer",
 			Help: "Size of the buffer between the packet reader and packet processor.",
 		}, func() float64 { return float64(len(config.packets)) }),
-		FileBuff: promauto.NewGauge(prometheus.GaugeOpts{
+		FileBuff: promauto.NewGaugeFunc(prometheus.GaugeOpts{
 			Name: "fogwillow_filesystem_change_buffer",
 			Help: "Size of the file system change channel buffer.",
-		}),
+		}, func() float64 { return float64(config.willow.FSLen()) }),
 		Packets: promauto.NewCounter(prometheus.CounterOpts{
 			Name: "fogwillow_packets_total",
 			Help: "Number of UDP packets processed. Often 1 packet per log line.",
