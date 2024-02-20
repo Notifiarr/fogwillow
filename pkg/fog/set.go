@@ -24,9 +24,9 @@ func (s Settings) Set(key, val string) {
 	s[key] = setting(val)
 }
 
-// HasFilepath returns false if there is no file path setting.
-func (s Settings) HasFilepath() bool {
-	return s[Filepath] != ""
+// ValidFilepath returns false if there is no file path setting or it contains bad stuff.
+func (s Settings) ValidFilepath() bool {
+	return s[Filepath] != "" && !strings.Contains(string(s[Filepath]), "../")
 }
 
 // Filepath trims and appends a root path to a setting path.

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Notifiarr/fogwillow/pkg/buf"
+	"github.com/Notifiarr/fogwillow/pkg/metrics"
 	"golift.io/cnfg"
 )
 
@@ -23,12 +24,16 @@ type Config struct {
 	// How large to make the channel buffer for file system changes.
 	BufferFileSys uint `toml:"buffer_file_sys" xml:"buffer_file_sys"`
 	// How many threads to run for file system changes.
-	Writers uint `toml:"writers" xml:"writers"`
-	// These allow this module to produce metrics.
-	Expires    func()              `toml:"-" xml:"-"`
-	AddBytes   func(bytes float64) `toml:"-" xml:"-"`
-	IncFiles   func()              `toml:"-" xml:"-"`
-	buf.Logger `toml:"-" xml:"-"`
+	Writers          uint `toml:"writers" xml:"writers"`
+	*metrics.Metrics `toml:"-"       xml:"-"`
+	Logger           `toml:"-"       xml:"-"`
+}
+
+// Logger lets this sub module print messages.
+type Logger interface {
+	Errorf(msg string, v ...interface{})
+	Printf(msg string, v ...interface{})
+	Debugf(msg string, v ...interface{})
 }
 
 // Willow is the working struct for this module. Get one from, NeWillow().
@@ -82,18 +87,6 @@ func (c *Config) setup() {
 
 	if c.BufferFileSys < 1 {
 		c.BufferFileSys = DefaultFileSysBuffer
-	}
-
-	if c.AddBytes == nil {
-		c.AddBytes = func(_ float64) {}
-	}
-
-	if c.IncFiles == nil {
-		c.IncFiles = func() {}
-	}
-
-	if c.Expires == nil {
-		c.Expires = func() {}
 	}
 }
 

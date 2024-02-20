@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Notifiarr/fogwillow/pkg/metrics"
 	"github.com/Notifiarr/fogwillow/pkg/willow"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golift.io/cnfg"
@@ -43,7 +44,7 @@ type Config struct {
 	packets      chan *packet
 	sock         *net.UDPConn
 	willow       *willow.Willow
-	metrics      *Metrics
+	metrics      *metrics.Metrics
 	httpSrv      *http.Server
 }
 
@@ -119,11 +120,13 @@ func (c *Config) setup() {
 	}
 
 	c.packets = make(chan *packet, c.BufferChan)
-	c.metrics = getMetrics(c)
+	c.metrics = metrics.Get(metrics.Funcs{
+		InMemory: func() float64 { return float64(c.willow.Len()) },
+		ChanBuff: func() float64 { return float64(len(c.packets)) },
+		FileBuff: func() float64 { return float64(c.willow.FSLen()) },
+	})
 	c.Config.Logger = c
-	c.Config.Expires = c.metrics.Expires.Inc
-	c.Config.IncFiles = c.metrics.Files.Inc
-	c.Config.AddBytes = c.metrics.Bytes.Add
+	c.Config.Metrics = c.metrics
 	c.willow = willow.NeWillow(c.Config)
 }
 

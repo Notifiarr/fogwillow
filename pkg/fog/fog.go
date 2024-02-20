@@ -81,7 +81,7 @@ func (p *packet) Handler(config *Config) {
 
 	if fileBuffer == nil {
 		// Create a new fileBuffer.
-		fileBuffer = buf.NewBuffer(filePath, body, config)
+		fileBuffer = buf.NewBuffer(filePath, body)
 		// Save the new file buffer in memory.
 		config.willow.Set(fileBuffer)
 	} else if _, err := fileBuffer.Write(body); err != nil { // Append directly to existing buffer.
@@ -90,7 +90,6 @@ func (p *packet) Handler(config *Config) {
 
 	switch {
 	case settings.Delete():
-		config.metrics.Deletes.Inc()
 		config.willow.Delete(filePath)
 		config.willow.RmRfDir(fileBuffer, buf.FlusOpts{})
 	case settings.Truncate():
@@ -146,9 +145,9 @@ func (p *packet) parse() (Settings, []byte, error) {
 
 // check the packet for valid settings.
 func (p *packet) check(settings Settings, confPassword string) error {
-	if !settings.HasFilepath() {
-		return fmt.Errorf("%w from %s with %d settings and no filepath",
-			ErrInvalidPacket, p.addr.IP, len(settings))
+	if !settings.ValidFilepath() {
+		return fmt.Errorf("%w from %s with %d settings and invalid filepath: %s",
+			ErrInvalidPacket, p.addr.IP, len(settings), settings.Filepath(""))
 	}
 
 	if !settings.Password(confPassword) {

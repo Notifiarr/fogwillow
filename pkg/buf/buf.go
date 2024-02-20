@@ -4,6 +4,7 @@ package buf
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -17,31 +18,18 @@ const (
 
 // FileBuffer holds a file before it gets flushed to disk.
 type FileBuffer struct {
-	Logger
 	FirstWrite time.Time
-	writes     uint
+	Writes     uint
 	mu         sync.Mutex
 	buf        *bytes.Buffer
 	Path       string
 }
 
-// Logger lets this sub module print messages.
-type Logger interface {
-	Errorf(msg string, v ...interface{})
-	Printf(msg string, v ...interface{})
-	Debugf(msg string, v ...interface{})
-}
-
 // NewBuffer returns a new FileBuffer read to use.
-func NewBuffer(path string, data []byte, logger Logger) *FileBuffer {
-	if logger == nil {
-		panic("NewBuffer() cannot take a nil logger")
-	}
-
+func NewBuffer(path string, data []byte) *FileBuffer {
 	return &FileBuffer{
-		Logger:     logger,
 		FirstWrite: time.Now(),
-		writes:     1,
+		Writes:     1,
 		buf:        bytes.NewBuffer(data),
 		Path:       path,
 	}
@@ -52,7 +40,7 @@ func NewBuffer(path string, data []byte, logger Logger) *FileBuffer {
 func (f *FileBuffer) Write(p []byte) (int, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.writes++
+	f.Writes++
 
 	return f.buf.Write(p) //nolint:wrapcheck
 }
@@ -70,41 +58,34 @@ type FlusOpts struct {
 }
 
 // RmRfDir deletes the path in the fileBuffer. This is dangerous and destructive.
-func (f *FileBuffer) RmRfDir() {
+func (f *FileBuffer) RmRfDir() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	f.Debugf("Deleting recursively: %s", f.Path)
-
-	start := time.Now()
-
 	if err := os.RemoveAll(f.Path); err != nil {
-		f.Errorf("Deleting path %s: %v", f.Path, err)
-		return
+		return fmt.Errorf("deleting file buffer: %s: %w", f.Path, err)
 	}
 
-	f.Printf("Deleted %s in %s", f.Path, time.Since(start))
+	return nil
 }
 
 // Flush writes the file buffer to disk.
-func (f *FileBuffer) Flush(opts FlusOpts) int {
+func (f *FileBuffer) Flush(opts FlusOpts) (int, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
 	if err := os.MkdirAll(filepath.Dir(f.Path), DirMode); err != nil {
-		// We could return here, but let's try to write the file anyway?
-		f.Errorf("Creating dir for %s: %v", f.Path, err)
+		return 0, fmt.Errorf("creating dir for %s: %w", f.Path, err)
 	}
 
-	word, fileFlag := "Wrote", os.O_APPEND|os.O_CREATE|os.O_WRONLY
+	fileFlag := os.O_APPEND | os.O_CREATE | os.O_WRONLY
 	if opts.Truncate {
-		word, fileFlag = "Truncated", os.O_TRUNC|os.O_CREATE|os.O_WRONLY
+		fileFlag = os.O_TRUNC | os.O_CREATE | os.O_WRONLY
 	}
 
 	file, err := os.OpenFile(f.Path, fileFlag, FileMode)
 	if err != nil {
-		f.Errorf("Opening or creating file %s: %v", f.Path, err)
-		return 0
+		return 0, fmt.Errorf("opening or creating file %s: %w", f.Path, err)
 	}
 	defer file.Close()
 
@@ -112,11 +93,8 @@ func (f *FileBuffer) Flush(opts FlusOpts) int {
 	if err != nil {
 		// Since all we do is print an info message, we do not need to return here.
 		// Consider that if you add more logic after this stanza.
-		f.Errorf("Writing file '%s' content: %v", f.Path, err)
+		return 0, fmt.Errorf("writing file '%s' content: %w", f.Path, err)
 	}
 
-	f.Printf("%s (%s) %d bytes (%d writes, age: %s) to '%s'",
-		word, opts.Type, size, f.writes, time.Since(f.FirstWrite.Round(time.Second)), f.Path)
-
-	return size
+	return size, nil
 }

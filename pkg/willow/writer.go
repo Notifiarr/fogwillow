@@ -1,6 +1,10 @@
 package willow
 
-import "github.com/Notifiarr/fogwillow/pkg/buf"
+import (
+	"time"
+
+	"github.com/Notifiarr/fogwillow/pkg/buf"
+)
 
 type flush struct {
 	*buf.FileBuffer
@@ -47,20 +51,49 @@ func (w *Willow) fileSystemWriter(idx uint) {
 		w.fsDone <- struct{}{}
 	}()
 
-	var size int
+	var (
+		err   error
+		size  int
+		start time.Time
+		word  string
+	)
 
 	for file := range w.fsOp {
+		start = time.Now()
+
 		if file.delete {
-			file.RmRfDir()
+			w.config.Debugf("Deleting recursively: %s", file.Path)
+			w.config.Ages.WithLabelValues("delete").Observe(start.Sub(file.FirstWrite).Seconds())
+
+			if err = file.RmRfDir(); err != nil {
+				w.config.Errorf("%v", err)
+			}
+
+			w.config.Durs.WithLabelValues("delete").Observe(time.Since(start).Seconds())
+			w.config.Printf("Deleted %s in %s", file.Path, time.Since(start))
+
 			continue
 		}
 
-		size = file.Flush(file.FlusOpts)
-		w.config.AddBytes(float64(size))
-		w.config.IncFiles()
+		w.config.Ages.WithLabelValues("file").Observe(start.Sub(file.FirstWrite).Seconds())
+
+		if size, err = file.Flush(file.FlusOpts); err != nil {
+			w.config.Errorf("%v", err)
+		}
+
+		w.config.Durs.WithLabelValues("file").Observe(time.Since(start).Seconds())
+		w.config.Bytes.Add(float64(size))
+
+		if word = "Wrote"; file.Truncate {
+			word = "Truncated"
+		}
+
+		w.config.Printf("%s (%s) %d bytes in %s (%d writes, age: %s) to '%s'",
+			word, file.Type, size, time.Since(start).Round(time.Millisecond),
+			file.Writes, time.Since(file.FirstWrite).Round(time.Millisecond), file.Path)
 
 		if file.Type == expiredLog {
-			w.config.Expires()
+			w.config.Expires.Inc()
 		}
 	}
 }
