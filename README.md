@@ -39,7 +39,7 @@ echo -n "1\nfilepath=/tmp/filename.txt\nfile content goes here\nline 2 in the fi
 ## Metrics
 
 Has a Prometheus exporter built in with juicy [metrics](https://github.com/Notifiarr/fogwillow/blob/main/pkg/metrics/metrics.go)!<br/>
-[![grafana](https://github.com/Notifiarr/fogwillow/wiki/images/grafana-thumb.png "grafana images")](https://github.com/Notifiarr/fogwillow/wiki/images/grafana-thumb.png)
+[![grafana](https://github.com/Notifiarr/fogwillow/wiki/images/grafana-thumb.png "grafana images")](https://github.com/Notifiarr/fogwillow/wiki/images/grafana.png)
 
 ## PHP Client
 
