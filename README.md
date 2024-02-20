@@ -33,7 +33,7 @@ password=option4lPassw0rd
 
 Create a packet with `echo` and `netcat`:
 ```bash
-echo -n "1\nfilepath=/tmp/filename.txt\nfile content goes here\nline 2 in the file" | nc -uw0 127.0.0.1 9000
+echo -e "1\nfilepath=/tmp/filename.txt\nfile content goes here\nline 2 in the file" | nc -uw0 127.0.0.1 9000
 ```
 
 ## Metrics
