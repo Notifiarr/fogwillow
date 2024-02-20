@@ -31,7 +31,7 @@ type Funcs struct {
 }
 
 // Get returns some metrics you can pass around and fill in.
-func Get(fnc Funcs) *Metrics { //nolint:funlen
+func Get(fnc Funcs) *Metrics {
 	start := time.Now()
 
 	return &Metrics{
@@ -78,12 +78,12 @@ func Get(fnc Funcs) *Metrics { //nolint:funlen
 		Ages: promauto.NewHistogramVec(prometheus.HistogramOpts{
 			Name:    "fogwillow_file_buffer_ages_seconds",
 			Help:    "The age of file buffers in memory when they are flushed to disk.",
-			Buckets: []float64{0.001, 0.01, 0.04, 0.16, 0.64, 2.6, 9.6},
+			Buckets: []float64{0.001, 0.01, 0.2, 1.2, 8},
 		}, []string{"kind"}), // kind="delete" | kind="file"
 		Durs: promauto.NewHistogramVec(prometheus.HistogramOpts{
 			Name:    "fogwillow_file_write_duration_seconds",
 			Help:    "The length of time it takes to delete or write a file buffer to disk.",
-			Buckets: []float64{0.001, 0.01, 0.04, 0.16, 0.64, 2.6, 9.6},
+			Buckets: []float64{0.001, 0.1, 1, 5, 15},
 		}, []string{"kind"}), // kind="delete" | kind="file"
 	}
 }

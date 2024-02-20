@@ -12,6 +12,8 @@ type flush struct {
 	delete bool
 }
 
+const hundred = 100
+
 // FSLen returns the number of file buffers waiting in the buffered channel.
 func (w *Willow) FSLen() int {
 	return len(w.fsOp)
@@ -89,8 +91,8 @@ func (w *Willow) fileSystemWriter(idx uint) {
 		}
 
 		w.config.Printf("%s (%s) %d bytes in %s (%d writes, age: %s) to '%s'",
-			word, file.Type, size, time.Since(start).Round(time.Millisecond),
-			file.Writes, time.Since(file.FirstWrite).Round(time.Millisecond), file.Path)
+			word, file.Type, size, time.Since(start).Round(hundred*time.Microsecond),
+			file.Writes, time.Since(file.FirstWrite).Round(hundred*time.Microsecond), file.Path)
 
 		if file.Type == expiredLog {
 			w.config.Expires.Inc()
