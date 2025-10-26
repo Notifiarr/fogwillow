@@ -5,12 +5,12 @@ go 1.23.0
 require (
 	github.com/prometheus/client_golang v1.23.2
 	golift.io/cnfg v0.2.3
-	golift.io/cnfgfile v0.0.0-20230531075023-f880041cc0a0
+	golift.io/cnfgfile v0.0.0-20240713024420-a5436d84eb48
 	golift.io/rotatorr v0.0.0-20240723172740-cb73b9c4894c
 )
 
 require (
-	github.com/BurntSushi/toml v1.3.0 // indirect
+	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/golang/mock v1.7.0-rc.1 // indirect
