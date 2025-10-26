@@ -2,7 +2,7 @@
 
 ## Log Buffer
 
-This app listens on a UDP port. Parses packets with a specific format. Buffers the packet payloads and writes them to disk.
+This app listens on a UDP port. Parses packets with a specific format. Buffers the packet payloads and writes them to disk in larger batches.
 
 Allows us to efficiently transport logs out of the PHP app and
 directly to the system with the hard disk where we store log files.
