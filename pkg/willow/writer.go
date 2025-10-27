@@ -100,7 +100,7 @@ func (w *Willow) flushFile(file *flush, start time.Time) {
 	}
 
 	w.config.Printf("%s (%s) [buf:%d/%d,files:%d] %d bytes in %s (%d writes, age: %s) to '%s'",
-		word, file.Type, len(w.fsOp), cap(w.fsOp), file.FileBuffer.Len(), size, time.Since(start).Round(hundred*time.Microsecond),
+		word, file.Type, len(w.fsOp), cap(w.fsOp), len(w.memory), size, time.Since(start).Round(hundred*time.Microsecond),
 		file.Writes, time.Since(file.FirstWrite).Round(hundred*time.Microsecond), file.Path)
 
 	if file.Type == expiredLog {
