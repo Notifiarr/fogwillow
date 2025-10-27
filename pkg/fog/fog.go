@@ -41,6 +41,7 @@ func (c *Config) packetListener(idx uint) {
 
 	for count := uint64(0); ; count++ {
 		packet := &packet{data: c.getSlice(), Config: c}
+
 		packet.size, packet.addr, err = c.sock.ReadFromUDP(*packet.data)
 		if errors.Is(err, net.ErrClosed) {
 			// This happens on normal shutdown.
