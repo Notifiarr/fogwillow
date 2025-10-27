@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Notifiarr/fogwillow/pkg/buf"
 	"github.com/Notifiarr/fogwillow/pkg/metrics"
 	"github.com/Notifiarr/fogwillow/pkg/willow"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -46,6 +47,7 @@ type Config struct {
 	willow       *willow.Willow
 	metrics      *metrics.Metrics
 	httpSrv      *http.Server
+	newBuf       func(path string, data []byte) *buf.FileBuffer
 }
 
 // LoadConfigFile does what its name implies.
@@ -56,6 +58,7 @@ func LoadConfigFile(path string) (*Config, error) {
 		BufferUDP:    DefaultUDPBuffer,
 		BufferPacket: DefaultPacketBuffer,
 		BufferChan:   DefaultChanBuffer,
+		Config:       &willow.Config{BufferPool: true},
 	}
 
 	if err := cnfgfile.Unmarshal(config, path); err != nil {
@@ -117,6 +120,10 @@ func (c *Config) setup() {
 
 	if c.Listeners < 1 {
 		c.Listeners = 1
+	}
+
+	if c.newBuf = buf.NewBuffer; c.BufferPool {
+		c.newBuf = buf.NewBufferFromPool
 	}
 
 	c.packets = make(chan *packet, c.BufferChan)

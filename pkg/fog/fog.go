@@ -15,6 +15,7 @@ type packet struct {
 	data []byte
 	size int
 	addr *net.UDPAddr
+	*Config
 }
 
 var (
@@ -29,7 +30,7 @@ func (c *Config) packetListener(idx uint) {
 	var err error
 
 	for count := uint64(0); ; count++ {
-		packet := &packet{data: make([]byte, c.BufferPacket)}
+		packet := &packet{data: make([]byte, c.BufferPacket), Config: c}
 
 		packet.size, packet.addr, err = c.sock.ReadFromUDP(packet.data)
 		if errors.Is(err, net.ErrClosed) {
@@ -57,48 +58,50 @@ func (c *Config) packetProcessor(idx uint) {
 
 	for packet := range c.packets {
 		c.metrics.Packets.Inc()
-		packet.Handler(c)
+		packet.Handler()
 	}
 }
 
 // Handler is invoked by packetListener for every received packet.
 // This is where the packet is parsed and stored into memory for later flushing to disk.
-func (p *packet) Handler(config *Config) {
+func (p *packet) Handler() {
 	settings, body, err := p.parse()
 	if err != nil {
-		config.Errorf("%v", err)
+		p.Errorf("%v", err)
 		return
 	}
 
-	if err := p.check(settings, config.Password); err != nil {
-		config.Errorf("%v", err)
+	if err := p.check(settings, p.Password); err != nil {
+		p.Errorf("%v", err)
 		return
 	}
 
 	// Combine our base path with the filename path provided in the packet.
-	filePath := settings.Filepath(config.OutputPath)
-	fileBuffer := config.willow.Get(filePath)
+	filePath := settings.Filepath(p.OutputPath)
+	fileBuffer := p.willow.Get(filePath)
 
 	if fileBuffer == nil {
 		// Create a new fileBuffer.
-		fileBuffer = buf.NewBuffer(filePath, body)
-		// Save the new file buffer in memory.
-		config.willow.Set(fileBuffer)
+		fileBuffer = p.newBuf(filePath, body)
+		// Save the new file buffer in the map.
+		p.willow.Set(fileBuffer)
 	} else if _, err := fileBuffer.Write(body); err != nil { // Append directly to existing buffer.
-		config.Errorf("Adding %d bytes to buffer (%d) for %s", p.size, fileBuffer.Len(), filePath)
+		p.Errorf("Adding %d bytes to buffer (%d) for %s", p.size, fileBuffer.Len(), filePath)
 	}
 
 	switch {
 	case settings.Delete():
-		config.willow.Delete(filePath)
-		config.willow.RmRfDir(fileBuffer, buf.FlusOpts{})
+		// Remove the file buffer from our memory map.
+		p.willow.Delete(filePath)
+		// Remove the file or folder from disk, recursively.
+		p.willow.RmRfDir(fileBuffer, buf.FlusOpts{})
 	case settings.Truncate():
-		config.metrics.Truncate.Inc()
+		p.metrics.Truncate.Inc()
 		fallthrough
 	case settings.Flush():
-		config.metrics.Flushes.Inc()
-		config.willow.Delete(filePath)                // remove from memory
-		config.willow.Flush(fileBuffer, buf.FlusOpts{ // write to disk
+		p.metrics.Flushes.Inc()
+		p.willow.Delete(filePath)                // remove from memory
+		p.willow.Flush(fileBuffer, buf.FlusOpts{ // write to disk
 			Truncate: settings.Truncate(),
 			Type:     "eof",
 		})

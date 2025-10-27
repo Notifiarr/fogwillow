@@ -16,13 +16,32 @@ const (
 	DirMode  = 0o755
 )
 
+// bufferPool is a sync.Pool to store and reuse *bytes.Buffer objects.
+var bufferPool = sync.Pool{ //nolint:gochecknoglobals
+	New: func() any {
+		// This function is called when the pool is empty and a new object is requested.
+		return &FileBuffer{}
+	},
+}
+
 // FileBuffer holds a file before it gets flushed to disk.
 type FileBuffer struct {
 	FirstWrite time.Time
 	Writes     uint
 	mu         sync.Mutex
-	buf        *bytes.Buffer
+	buf        bytes.Buffer
 	Path       string
+}
+
+// NewBufferFromPool returns a FileBuffer from a pool.
+func NewBufferFromPool(path string, data []byte) *FileBuffer {
+	buf := bufferPool.Get().(*FileBuffer) //nolint:forcetypeassert
+	buf.Path = path
+	buf.FirstWrite = time.Now()
+	buf.Writes = 1
+	buf.buf.Write(data)
+
+	return buf
 }
 
 // NewBuffer returns a new FileBuffer read to use.
@@ -30,7 +49,7 @@ func NewBuffer(path string, data []byte) *FileBuffer {
 	return &FileBuffer{
 		FirstWrite: time.Now(),
 		Writes:     1,
-		buf:        bytes.NewBuffer(data),
+		buf:        *bytes.NewBuffer(data),
 		Path:       path,
 	}
 }
@@ -67,6 +86,12 @@ func (f *FileBuffer) RmRfDir() error {
 	}
 
 	return nil
+}
+
+// Reset resets the file buffer to its initial state. It's not thread safe, and should not be called more than once.
+func (f *FileBuffer) Reset() {
+	f.buf.Reset()
+	bufferPool.Put(f)
 }
 
 // Flush writes the file buffer to disk.

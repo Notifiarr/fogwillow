@@ -1,22 +1,32 @@
+version: '2'
 linters:
-  enable-all: true
+  default: all
   disable:
-  # deprecated
-    - maligned
-    - scopelint
-    - interfacer
-    - golint
-    - exhaustivestruct
-    - nosnakecase
-    - structcheck
-    - deadcode
-    - varcheck
-    - ifshort
-    # unused
-    - exhaustruct
-    - exhaustive
-    - nlreturn
     - depguard
-
-run:
-  timeout: 5m
+    - exhaustruct
+    - embeddedstructfieldcheck
+    - funcorder
+    - nlreturn
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
