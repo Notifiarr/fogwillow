@@ -64,8 +64,8 @@ func (w *Willow) fileSystemWriter(idx uint) {
 			w.flushFile(file, start)
 		}
 
-		if w.config.BufferPool {
-			file.Reset() // Reset the buffer, so it can be reused.
+		if w.config.BufferPool { // Reset the buffer, so it can be reused.
+			file.Reset(100 << 10) //nolint:mnd // Limit reused file-buffers to 100KB.
 		}
 	}
 }
@@ -81,10 +81,6 @@ func (w *Willow) deleteFile(file *buf.FileBuffer, start time.Time) {
 
 	w.config.Durs.WithLabelValues("delete").Observe(time.Since(start).Seconds())
 	w.config.Printf("Deleted %s in %s", file.Path, time.Since(start))
-
-	if w.config.BufferPool {
-		file.Reset() // Reset the buffer, so it can be reused.
-	}
 }
 
 func (w *Willow) flushFile(file *flush, start time.Time) {

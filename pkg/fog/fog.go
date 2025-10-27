@@ -12,7 +12,7 @@ import (
 )
 
 type packet struct {
-	data []byte
+	data *[]byte
 	size int
 	addr *net.UDPAddr
 	*Config
@@ -24,6 +24,15 @@ var (
 	ErrBadPassword   = errors.New("bad password")
 )
 
+func (c *Config) newSlice() any {
+	p := make([]byte, c.BufferPacket)
+	return &p
+}
+
+func (c *Config) getSlice() *[]byte {
+	return c.bytesPool.Get().(*[]byte) //nolint:forcetypeassert
+}
+
 // packetListener gets raw packets from the UDP socket and sends them to another go routine.
 func (c *Config) packetListener(idx uint) {
 	c.Printf("Starting UDP packet listener %d.", idx)
@@ -31,9 +40,9 @@ func (c *Config) packetListener(idx uint) {
 	var err error
 
 	for count := uint64(0); ; count++ {
-		packet := &packet{data: make([]byte, c.BufferPacket), Config: c}
+		packet := &packet{data: c.getSlice(), Config: c}
 
-		packet.size, packet.addr, err = c.sock.ReadFromUDP(packet.data)
+		packet.size, packet.addr, err = c.sock.ReadFromUDP(*packet.data)
 		if errors.Is(err, net.ErrClosed) {
 			// This happens on normal shutdown.
 			c.Printf("Closing UDP packet listener %d.", idx)
@@ -41,6 +50,8 @@ func (c *Config) packetListener(idx uint) {
 		} else if err != nil {
 			// This is probably rare.
 			c.Errorf("Reading UDP socket %d: %v", idx, err)
+			c.bytesPool.Put(packet.data)
+
 			continue
 		}
 
@@ -60,6 +71,11 @@ func (c *Config) packetProcessor(idx uint) {
 	for packet := range c.packets {
 		c.metrics.Packets.Inc()
 		packet.Handler()
+
+		if c.BufferPool {
+			// Put the packet's byte slice back into the pool for reuse.
+			c.bytesPool.Put(packet.data)
+		}
 	}
 }
 
@@ -112,30 +128,30 @@ func (p *packet) Handler() {
 
 // parse the packet into structured data.
 func (p *packet) parse() (Settings, []byte, error) {
-	newline := bytes.IndexByte(p.data, '\n')
+	newline := bytes.IndexByte(*p.data, '\n')
 	if newline < 0 {
 		return nil, nil, fmt.Errorf("%w from %s (first newline at %d)", ErrInvalidPacket, p.addr.IP, newline)
 	}
 
 	// Turn the first line into a number. That number tells us how many more lines to parse. Usually 1 to 3.
-	settingCount, err := strconv.Atoi(string(p.data[0:newline]))
+	settingCount, err := strconv.Atoi(string((*p.data)[0:newline]))
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: from %s (first newline at %d, prior value: %s)",
-			err, p.addr.IP, newline, string(p.data[0:newline]))
+			err, p.addr.IP, newline, string((*p.data)[0:newline]))
 	}
 
 	settings := make(Settings, settingCount)
 	lastline := newline + 1 // +1 to remove the \n
 	// Parse each line 1 at a time and add them to the settings map.
 	for ; settingCount > 0; settingCount-- {
-		newline = bytes.IndexByte(p.data[lastline:], '\n')
+		newline = bytes.IndexByte((*p.data)[lastline:], '\n')
 		if newline < 0 {
 			return nil, nil, fmt.Errorf("%w with %d settings from %s (newline/lastline: %d/%d): missing first newline",
 				ErrInvalidPacket, settingCount+len(settings), p.addr.IP, newline, lastline)
 		}
 		// Split the setting line on = to get name and value.
-		settingVal := strings.SplitN(string(p.data[lastline:newline+lastline]), "=", 2) //nolint:mnd
-		if len(settingVal) != 2 {                                                       //nolint:mnd
+		settingVal := strings.SplitN(string((*p.data)[lastline:newline+lastline]), "=", 2) //nolint:mnd
+		if len(settingVal) != 2 {                                                          //nolint:mnd
 			return nil, nil, fmt.Errorf("%w with %d settings from %s (newline/lastline: %d/%d): setting '%s' missing equal",
 				ErrInvalidPacket, settingCount+len(settings), p.addr.IP, newline, lastline, settingVal[0])
 		}
@@ -145,7 +161,7 @@ func (p *packet) parse() (Settings, []byte, error) {
 		lastline += newline + 1 // +1 to remove the \n
 	}
 
-	return settings, p.data[lastline:p.size], nil
+	return settings, (*p.data)[lastline:p.size], nil
 }
 
 // check the packet for valid settings.

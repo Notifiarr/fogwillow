@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/Notifiarr/fogwillow/pkg/buf"
@@ -24,7 +25,7 @@ const (
 	DefaultListenAddr   = ":9000"
 	DefaultUDPBuffer    = 1024 * 1024
 	DefaultPacketBuffer = 1024 * 8
-	DefaultChanBuffer   = 1024 * 10
+	DefaultChanBuffer   = 1024
 )
 
 // Config is the input _and_ running data.
@@ -49,6 +50,7 @@ type Config struct {
 	metrics      *metrics.Metrics
 	httpSrv      *http.Server
 	newBuf       func(path string, data []byte) *buf.FileBuffer
+	bytesPool    sync.Pool
 }
 
 // LoadConfigFile does what its name implies.
@@ -130,6 +132,7 @@ func (c *Config) setup() {
 		c.newBuf = buf.NewBufferFromPool
 	}
 
+	c.bytesPool = sync.Pool{New: c.newSlice}
 	c.packets = make(chan *packet, c.BufferChan)
 	c.metrics = metrics.Get(metrics.Funcs{
 		InMemory: func() float64 { return float64(c.willow.Len()) },

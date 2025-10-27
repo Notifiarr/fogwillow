@@ -84,7 +84,7 @@ func Get(fnc Funcs) *Metrics {
 		Durs: promauto.NewHistogramVec(prometheus.HistogramOpts{
 			Name:    "fogwillow_file_write_duration_seconds",
 			Help:    "The length of time it takes to delete or write a file buffer to disk.",
-			Buckets: []float64{0.001, 0.1, 1, 5, 15},
+			Buckets: []float64{0.001, 0.1, 1, 5, 15, 60},
 		}, []string{"kind"}), // kind="delete" | kind="file"
 	}
 }
