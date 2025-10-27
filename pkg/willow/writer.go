@@ -99,8 +99,8 @@ func (w *Willow) flushFile(file *flush, start time.Time) {
 		word = "Truncated"
 	}
 
-	w.config.Printf("%s (%s) %d bytes in %s (%d writes, age: %s) to '%s'",
-		word, file.Type, size, time.Since(start).Round(hundred*time.Microsecond),
+	w.config.Printf("%s (%s) [buf:%d/%d,files:%d] %d bytes in %s (%d writes, age: %s) to '%s'",
+		word, file.Type, len(w.fsOp), cap(w.fsOp), file.FileBuffer.Len(), size, time.Since(start).Round(hundred*time.Microsecond),
 		file.Writes, time.Since(file.FirstWrite).Round(hundred*time.Microsecond), file.Path)
 
 	if file.Type == expiredLog {
