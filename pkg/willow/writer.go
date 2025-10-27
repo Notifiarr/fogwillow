@@ -50,7 +50,7 @@ func (w *Willow) fileSystemWriter(idx uint) {
 
 	defer func() { // Signal Stop() we're done.
 		w.config.Printf("Closing file system writer %d.", idx)
-		w.fsDone <- struct{}{}
+		w.fsDone <- struct{}{} //nolint:wsl_v5
 	}()
 
 	var start time.Time
@@ -90,7 +90,7 @@ func (w *Willow) deleteFile(file *buf.FileBuffer, start time.Time) {
 func (w *Willow) flushFile(file *flush, start time.Time) {
 	w.config.Ages.WithLabelValues("file").Observe(start.Sub(file.FirstWrite).Seconds())
 
-	size, err := file.FileBuffer.Flush(file.FlusOpts)
+	size, err := file.Flush(file.FlusOpts)
 	if err != nil {
 		w.config.Errorf("%v", err)
 	}

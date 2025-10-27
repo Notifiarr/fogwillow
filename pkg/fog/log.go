@@ -30,10 +30,10 @@ func (c *Config) setupLogs() {
 
 	rotator = rotatorr.NewMust(&rotatorr.Config{
 		Filepath: c.LogFile,
-		FileSize: int64(c.LogFileMB * megabyte),
+		FileSize: int64(c.LogFileMB * megabyte), //nolint:gosec
 		FileMode: logFileMode,
 		Rotatorr: &timerotator.Layout{
-			FileCount:  int(c.LogFiles),
+			FileCount:  int(c.LogFiles), //nolint:gosec
 			PostRotate: postRotate,
 		},
 	})

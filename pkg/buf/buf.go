@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// Constants for file and directory modes.
 const (
 	FileMode = 0o664
 	DirMode  = 0o755
@@ -56,14 +57,16 @@ func NewBuffer(path string, data []byte) *FileBuffer {
 
 // Write sends content to the file buffer and increments the write counter.
 // We added a mutex that makes this thread safe.
-func (f *FileBuffer) Write(p []byte) (int, error) {
+func (f *FileBuffer) Write(data []byte) (int, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+
 	f.Writes++
 
-	return f.buf.Write(p) //nolint:wrapcheck
+	return f.buf.Write(data) //nolint:wrapcheck
 }
 
+// Len returns the length of the file buffer.
 func (f *FileBuffer) Len() int {
 	return f.buf.Len()
 }
@@ -81,7 +84,8 @@ func (f *FileBuffer) RmRfDir() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	if err := os.RemoveAll(f.Path); err != nil {
+	err := os.RemoveAll(f.Path)
+	if err != nil {
 		return fmt.Errorf("deleting file buffer: %s: %w", f.Path, err)
 	}
 
@@ -99,7 +103,8 @@ func (f *FileBuffer) Flush(opts FlusOpts) (int, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	if err := os.MkdirAll(filepath.Dir(f.Path), DirMode); err != nil {
+	err := os.MkdirAll(filepath.Dir(f.Path), DirMode)
+	if err != nil {
 		return 0, fmt.Errorf("creating dir for %s: %w", f.Path, err)
 	}
 
@@ -108,7 +113,7 @@ func (f *FileBuffer) Flush(opts FlusOpts) (int, error) {
 		fileFlag = os.O_TRUNC | os.O_CREATE | os.O_WRONLY
 	}
 
-	file, err := os.OpenFile(f.Path, fileFlag, FileMode)
+	file, err := os.OpenFile(f.Path, fileFlag, FileMode) //nolint:gosec
 	if err != nil {
 		return 0, fmt.Errorf("opening or creating file %s: %w", f.Path, err)
 	}

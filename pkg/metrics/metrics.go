@@ -1,3 +1,4 @@
+// Package metrics provides the exported application metrics in prometheus format.
 package metrics
 
 import (
