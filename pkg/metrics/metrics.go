@@ -78,7 +78,7 @@ func Get(fnc Funcs) *Metrics {
 		Ages: promauto.NewHistogramVec(prometheus.HistogramOpts{
 			Name:    "fogwillow_file_buffer_ages_seconds",
 			Help:    "The age of file buffers in memory when they are flushed to disk.",
-			Buckets: []float64{0.001, 0.01, 0.2, 1.2, 8},
+			Buckets: []float64{0.001, 0.01, 0.2, 1.2, 8, 30},
 		}, []string{"kind"}), // kind="delete" | kind="file"
 		Durs: promauto.NewHistogramVec(prometheus.HistogramOpts{
 			Name:    "fogwillow_file_write_duration_seconds",

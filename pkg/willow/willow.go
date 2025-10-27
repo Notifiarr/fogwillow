@@ -17,6 +17,8 @@ const (
 
 // Config is the input data needed to make a Willow.
 type Config struct {
+	// Whether to use a buffer pool for file buffers.
+	BufferPool bool `toml:"buffer_pool" xml:"buffer_pool"`
 	// How often to scan entire memory map for flushable files.
 	GroupInterval cnfg.Duration `toml:"group_interval" xml:"group_interval"`
 	// How old a file must be to flush it away.
