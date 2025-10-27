@@ -18,9 +18,10 @@ type packet struct {
 	*Config
 }
 
+// Errors for the packet parser.
 var (
-	ErrInvalidPacket = fmt.Errorf("invalid packet")
-	ErrBadPassword   = fmt.Errorf("bad password")
+	ErrInvalidPacket = errors.New("invalid packet")
+	ErrBadPassword   = errors.New("bad password")
 )
 
 // packetListener gets raw packets from the UDP socket and sends them to another go routine.
@@ -71,7 +72,8 @@ func (p *packet) Handler() {
 		return
 	}
 
-	if err := p.check(settings, p.Password); err != nil {
+	err = p.check(settings, p.Password)
+	if err != nil {
 		p.Errorf("%v", err)
 		return
 	}
@@ -85,7 +87,7 @@ func (p *packet) Handler() {
 		fileBuffer = p.newBuf(filePath, body)
 		// Save the new file buffer in the map.
 		p.willow.Set(fileBuffer)
-	} else if _, err := fileBuffer.Write(body); err != nil { // Append directly to existing buffer.
+	} else if _, err := fileBuffer.Write(body); err != nil { //nolint:noinlineerr // Append directly to existing buffer.
 		p.Errorf("Adding %d bytes to buffer (%d) for %s", p.size, fileBuffer.Len(), filePath)
 	}
 
@@ -132,8 +134,8 @@ func (p *packet) parse() (Settings, []byte, error) {
 				ErrInvalidPacket, settingCount+len(settings), p.addr.IP, newline, lastline)
 		}
 		// Split the setting line on = to get name and value.
-		settingVal := strings.SplitN(string(p.data[lastline:newline+lastline]), "=", 2) //nolint:gomnd
-		if len(settingVal) != 2 {                                                       //nolint:gomnd
+		settingVal := strings.SplitN(string(p.data[lastline:newline+lastline]), "=", 2) //nolint:mnd
+		if len(settingVal) != 2 {                                                       //nolint:mnd
 			return nil, nil, fmt.Errorf("%w with %d settings from %s (newline/lastline: %d/%d): setting '%s' missing equal",
 				ErrInvalidPacket, settingCount+len(settings), p.addr.IP, newline, lastline, settingVal[0])
 		}

@@ -1,3 +1,4 @@
+// Package fog is the main package for the Fogwillow application.
 package fog
 
 import (
@@ -61,11 +62,13 @@ func LoadConfigFile(path string) (*Config, error) {
 		Config:       &willow.Config{BufferPool: true},
 	}
 
-	if err := cnfgfile.Unmarshal(config, path); err != nil {
+	err := cnfgfile.Unmarshal(config, path)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse configuration: %w", err)
 	}
 
-	if _, err := cnfg.UnmarshalENV(config, "FW"); err != nil {
+	_, err = cnfg.UnmarshalENV(config, "FW")
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse environment: %w", err)
 	}
 
@@ -78,7 +81,8 @@ func LoadConfigFile(path string) (*Config, error) {
 
 // Start the applications.
 func (c *Config) Start() error {
-	if err := c.setupSocket(); err != nil {
+	err := c.setupSocket()
+	if err != nil {
 		return err
 	}
 
@@ -101,10 +105,10 @@ func (c *Config) Start() error {
 		ReadTimeout:       time.Second,
 		ReadHeaderTimeout: time.Second,
 		WriteTimeout:      time.Second,
-		IdleTimeout:       20 * time.Second, //nolint:gomnd
+		IdleTimeout:       20 * time.Second, //nolint:mnd
 	}
 
-	err := c.httpSrv.ListenAndServe()
+	err = c.httpSrv.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("web server failed: %w", err)
 	}
@@ -132,8 +136,8 @@ func (c *Config) setup() {
 		ChanBuff: func() float64 { return float64(len(c.packets)) },
 		FileBuff: func() float64 { return float64(c.willow.FSLen()) },
 	})
-	c.Config.Logger = c
-	c.Config.Metrics = c.metrics
+	c.Logger = c
+	c.Metrics = c.metrics
 	c.willow = willow.NeWillow(c.Config)
 }
 
@@ -143,11 +147,13 @@ func (c *Config) setupSocket() error {
 		return fmt.Errorf("invalid listen_addr provided: %w", err)
 	}
 
-	if c.sock, err = net.ListenUDP("udp", addr); err != nil {
+	c.sock, err = net.ListenUDP("udp", addr)
+	if err != nil {
 		return fmt.Errorf("unable to use provided listen_addr: %w", err)
 	}
 
-	if err := c.sock.SetReadBuffer(int(c.BufferUDP)); err != nil {
+	err = c.sock.SetReadBuffer(int(c.BufferUDP)) //nolint:gosec
+	if err != nil {
 		return fmt.Errorf("unable to set socket read buffer %d: %w", c.BufferUDP, err)
 	}
 

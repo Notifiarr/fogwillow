@@ -1,3 +1,4 @@
+// Package main is the main package for the Fogwillow application.
 package main
 
 import (
@@ -22,7 +23,8 @@ func main() {
 
 	go catchSignal(fog)
 
-	if err := fog.Start(); err != nil {
+	err = fog.Start()
+	if err != nil {
 		log.Fatalf("Starting Fog Failed: %v", err)
 	}
 
@@ -35,7 +37,8 @@ func catchSignal(fog *fog.Config) {
 	// Wait here for a signal to shut down.
 	fog.Printf("Shutting down! Caught signal: %s", <-sigCh)
 
-	if err := fog.Shutdown(); err != nil {
+	err := fog.Shutdown()
+	if err != nil {
 		log.Fatalf("Stopping Fog Failed: %v", err)
 	}
 }
