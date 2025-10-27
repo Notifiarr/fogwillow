@@ -93,9 +93,12 @@ func (f *FileBuffer) RmRfDir() error {
 }
 
 // Reset resets the file buffer to its initial state. It's not thread safe, and should not be called more than once.
-func (f *FileBuffer) Reset() {
-	f.buf.Reset()
-	bufferPool.Put(f)
+// Only call this if you're using the buffer pool: NewBufferFromPool().
+func (f *FileBuffer) Reset(maxSize int) {
+	if f.buf.Cap() <= maxSize {
+		f.buf.Reset()
+		bufferPool.Put(f)
+	}
 }
 
 // Flush writes the file buffer to disk.
