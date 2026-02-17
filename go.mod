@@ -1,12 +1,12 @@
 module github.com/Notifiarr/fogwillow
 
-go 1.24.0
+go 1.24.9
 
 require (
 	github.com/prometheus/client_golang v1.23.2
 	golift.io/cnfg v0.2.3
 	golift.io/cnfgfile v0.0.0-20240713024420-a5436d84eb48
-	golift.io/rotatorr v0.0.0-20240723172740-cb73b9c4894c
+	golift.io/rotatorr v0.0.0-20260217050959-f6ac6fc7b38e
 )
 
 require (
