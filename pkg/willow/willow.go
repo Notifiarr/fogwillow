@@ -12,7 +12,7 @@ import (
 
 // Defaults for the module.
 const (
-	DefaultFileSysBuffer = 1024 * 10
+	DefaultFileSysBuffer = 1 << 15 // 32 thousand
 	DefaultFlushInterval = 16 * time.Second
 )
 

@@ -3,18 +3,16 @@ package fog
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"net"
-	"net/http"
 	"sync"
 	"time"
 
 	"github.com/Notifiarr/fogwillow/pkg/buf"
+	"github.com/Notifiarr/fogwillow/pkg/httpserver"
 	"github.com/Notifiarr/fogwillow/pkg/metrics"
 	"github.com/Notifiarr/fogwillow/pkg/willow"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golift.io/cnfg"
 	"golift.io/cnfgfile"
 )
@@ -22,33 +20,33 @@ import (
 // Some application defaults.
 const (
 	DefaultOutputPath   = "/tmp"
-	DefaultListenAddr   = ":9000"
-	DefaultUDPBuffer    = 1024 * 1024
-	DefaultPacketBuffer = 1024 * 8
-	DefaultChanBuffer   = 1024
+	DefaultUDPBuffer    = 1 << 22 // 4MB
+	DefaultPacketBuffer = 1 << 18 // 256KB
+	DefaultChanBuffer   = 1 << 15 // 32 thousand
 )
 
 // Config is the input _and_ running data.
 type Config struct {
 	*willow.Config
-	Password     string `toml:"password"      xml:"password"`
-	OutputPath   string `toml:"output_path"   xml:"output_path"`
-	ListenAddr   string `toml:"listen_addr"   xml:"listen_addr"`
-	LogFile      string `toml:"log_file"      xml:"log_file"`
-	LogFileMB    uint   `toml:"log_file_mb"   xml:"log_file_mb"`
-	LogFiles     uint   `toml:"log_files"     xml:"log_files"`
-	BufferUDP    uint   `toml:"buffer_udp"    xml:"buffer_udp"`
-	BufferPacket uint   `toml:"buffer_packet" xml:"buffer_packet"`
-	BufferChan   uint   `toml:"buffer_chan"   xml:"buffer_chan"`
-	Listeners    uint   `toml:"listeners"     xml:"listeners"`
-	Processors   uint   `toml:"processors"    xml:"processors"`
-	Debug        bool   `toml:"debug"         xml:"debug"`
+	HTTPServer   *httpserver.Config `toml:"http_server"   xml:"http_server"`
+	Password     string             `toml:"password"      xml:"password"`
+	OutputPath   string             `toml:"output_path"   xml:"output_path"`
+	ListenAddr   string             `toml:"listen_addr"   xml:"listen_addr"`
+	LogFile      string             `toml:"log_file"      xml:"log_file"`
+	LogFileMB    uint               `toml:"log_file_mb"   xml:"log_file_mb"`
+	LogFiles     uint               `toml:"log_files"     xml:"log_files"`
+	BufferUDP    uint               `toml:"buffer_udp"    xml:"buffer_udp"`
+	BufferPacket uint               `toml:"buffer_packet" xml:"buffer_packet"`
+	BufferChan   uint               `toml:"buffer_chan"   xml:"buffer_chan"`
+	Listeners    uint               `toml:"listeners"     xml:"listeners"`
+	Processors   uint               `toml:"processors"    xml:"processors"`
+	Debug        bool               `toml:"debug"         xml:"debug"`
 	log          *log.Logger
 	packets      chan *packet
 	sock         *net.UDPConn
 	willow       *willow.Willow
 	metrics      *metrics.Metrics
-	httpSrv      *http.Server
+	httpSrv      *httpserver.Server
 	newBuf       func(path string, data []byte) *buf.FileBuffer
 	bytesPool    sync.Pool
 	listenerWg   sync.WaitGroup
@@ -59,7 +57,7 @@ type Config struct {
 func LoadConfigFile(path string) (*Config, error) {
 	config := &Config{
 		OutputPath:   DefaultOutputPath,
-		ListenAddr:   DefaultListenAddr,
+		HTTPServer:   httpserver.DefaultConfig(),
 		BufferUDP:    DefaultUDPBuffer,
 		BufferPacket: DefaultPacketBuffer,
 		BufferChan:   DefaultChanBuffer,
@@ -104,20 +102,10 @@ func (c *Config) Start() error {
 		go c.packetListener(idx)
 	}
 
-	smx := http.NewServeMux()
-	smx.Handle("/metrics", promhttp.Handler())
-
-	c.httpSrv = &http.Server{
-		Handler:           smx,
-		Addr:              c.ListenAddr,
-		ReadTimeout:       time.Second,
-		ReadHeaderTimeout: time.Second,
-		WriteTimeout:      time.Second,
-		IdleTimeout:       20 * time.Second, //nolint:mnd
-	}
+	c.httpSrv = httpserver.New(c.HTTPServer, nil)
 
 	err = c.httpSrv.ListenAndServe()
-	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err != nil {
 		return fmt.Errorf("web server failed: %w", err)
 	}
 
@@ -148,17 +136,23 @@ func (c *Config) setup() {
 	c.Logger = c
 	c.Metrics = c.metrics
 	c.willow = willow.NeWillow(c.Config)
+
+	if c.HTTPServer == nil {
+		c.HTTPServer = httpserver.DefaultConfig()
+	}
+
+	c.HTTPServer.Setup()
 }
 
 func (c *Config) setupSocket() error {
 	addr, err := net.ResolveUDPAddr("udp", c.ListenAddr)
 	if err != nil {
-		return fmt.Errorf("invalid listen_addr provided: %w", err)
+		return fmt.Errorf("invalid udp listen_addr: %w", err)
 	}
 
 	c.sock, err = net.ListenUDP("udp", addr)
 	if err != nil {
-		return fmt.Errorf("unable to use provided listen_addr: %w", err)
+		return fmt.Errorf("unable to use udp listen_addr: %w", err)
 	}
 
 	err = c.sock.SetReadBuffer(int(c.BufferUDP)) //nolint:gosec
