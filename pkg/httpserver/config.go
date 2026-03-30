@@ -10,6 +10,8 @@ const (
 	DefaultWriteTimeout      = 10 * time.Second
 	DefaultIdleTimeout       = 120 * time.Second
 	DefaultMaxHeaderBytes    = 1 << 16 // 64KB
+	DefaultAccessLogMB       = 1 << 22 // 4MB
+	DefaultAccessLogFiles    = 10      // 10 files
 )
 
 // Config is the configuration for the HTTP server.
@@ -22,6 +24,9 @@ type Config struct {
 	MaxHeaderBytes    int           `toml:"max_header_bytes"    xml:"max_header_bytes"`
 	TLSCertPath       string        `toml:"tls_cert_path"       xml:"tls_cert_path"`
 	TLSKeyPath        string        `toml:"tls_key_path"        xml:"tls_key_path"`
+	AccessLog         string        `toml:"access_log"          xml:"access_log"`
+	AccessLogMB       int64         `toml:"access_log_mb"       xml:"access_log_mb"`
+	AccessLogFiles    int           `toml:"access_log_files"    xml:"access_log_files"`
 }
 
 // DefaultConfig returns the default configuration for the HTTP server.
@@ -60,5 +65,13 @@ func (c *Config) Setup() {
 
 	if c.MaxHeaderBytes <= 0 {
 		c.MaxHeaderBytes = DefaultMaxHeaderBytes
+	}
+
+	if c.AccessLogFiles == 0 {
+		c.AccessLogFiles = DefaultAccessLogFiles
+	}
+
+	if c.AccessLogMB == 0 {
+		c.AccessLogMB = DefaultAccessLogMB
 	}
 }

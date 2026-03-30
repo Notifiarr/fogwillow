@@ -67,7 +67,8 @@ func (c *Config) printConfig() {
 	c.Printf("=> UDP Listen Address / Password: %s / %v", c.ListenAddr, c.Password != "")
 
 	if c.HTTPServer.TLSCertPath != "" && c.HTTPServer.TLSKeyPath != "" {
-		c.Printf("=> HTTPS Listen Address: %s (Cert=%s, Key=%s)", c.HTTPServer.ListenAddr, c.HTTPServer.TLSCertPath, c.HTTPServer.TLSKeyPath)
+		c.Printf("=> HTTPS Listen Address: %s (Cert=%s, Key=%s)",
+			c.HTTPServer.ListenAddr, c.HTTPServer.TLSCertPath, c.HTTPServer.TLSKeyPath)
 	} else {
 		c.Printf("=> HTTP Listen Address: %s", c.HTTPServer.ListenAddr)
 	}
@@ -86,5 +87,12 @@ func (c *Config) printConfig() {
 		c.Printf("=> Log File: %s (count: %d, size: %dMB), debug: %v", c.LogFile, c.LogFiles, c.LogFileMB, c.Debug)
 	} else {
 		c.Printf("=> No Log File, debug: %v", c.Debug)
+	}
+
+	if c.HTTPServer.AccessLog != "" {
+		c.Printf("=> HTTP Access Log: %s (count: %d, size: %dMB)",
+			c.HTTPServer.AccessLog, c.HTTPServer.AccessLogFiles, c.HTTPServer.AccessLogMB)
+	} else {
+		c.Printf("=> HTTP Access Log: disabled")
 	}
 }
