@@ -32,7 +32,7 @@ func (w *Willow) memoryHole() {
 	groups := time.NewTicker(w.config.GroupInterval.Duration)
 
 	defer func() {
-		w.config.Printf("Writing %d files before exit.", len(w.memory))
+		w.config.Printf("Writing %d+%d files before exit.", len(w.memory), len(w.fsOp))
 		w.washer(time.Time{}, true) // Clear out all the files when we exit.
 		groups.Stop()
 		close(w.repCh) // signal Stop() we are done.

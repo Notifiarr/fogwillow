@@ -33,9 +33,9 @@ type Config struct {
 
 // Logger lets this sub module print messages.
 type Logger interface {
-	Errorf(msg string, v ...interface{})
-	Printf(msg string, v ...interface{})
-	Debugf(msg string, v ...interface{})
+	Errorf(msg string, v ...any)
+	Printf(msg string, v ...any)
+	Debugf(msg string, v ...any)
 }
 
 // Willow is the working struct for this module. Get one from, NeWillow().

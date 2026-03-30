@@ -8,7 +8,6 @@ Allows us to efficiently transport logs out of the PHP app and
 directly to the system with the hard disk where we store log files.
 We use this because NFS was too slow, and we can trade a bit of reliability for faster log exfiltration.
 
-
 ## Packet Format
 
 The first line of the packet is an integer that signals how many settings to expect.
@@ -32,7 +31,8 @@ password=option4lPassw0rd
 ```
 
 Create a packet with `echo` and `netcat`:
-```bash
+
+```shell
 echo -e "1\nfilepath=/tmp/filename.txt\nfile content goes here\nline 2 in the file" | nc -uw0 127.0.0.1 9000
 ```
 
@@ -63,9 +63,11 @@ function socket_put_contents($socket, $outputfile, $line, $host, $length = 8000)
 }
 ```
 
-# Usage
+## Usage
 
 We run this from a Docker container directly on a Synology NAS. Using this image:<br/>
 `ghcr.io/Notifiarr/fogwillow:main`
 
-Mount `/config` and give it a `/config/fog.conf` file that looks like the [example](https://github.com/Notifiarr/fogwillow/blob/main/fog.conf). You also want to mount a place to store files, and set that to `output_path` in the config file.
+Mount `/config` and give it a `/config/fog.conf` file that looks like the
+[example](https://github.com/Notifiarr/fogwillow/blob/main/fog.conf).
+You also want to mount a place to store files, and set that to `output_path` in the config file.

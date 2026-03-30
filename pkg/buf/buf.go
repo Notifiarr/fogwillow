@@ -116,7 +116,7 @@ func (f *FileBuffer) Flush(opts FlusOpts) (int, error) {
 		fileFlag = os.O_TRUNC | os.O_CREATE | os.O_WRONLY
 	}
 
-	file, err := os.OpenFile(f.Path, fileFlag, FileMode) //nolint:gosec
+	file, err := os.OpenFile(f.Path, fileFlag, FileMode)
 	if err != nil {
 		return 0, fmt.Errorf("opening or creating file %s: %w", f.Path, err)
 	}

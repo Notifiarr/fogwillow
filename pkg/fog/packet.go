@@ -35,7 +35,7 @@ func (c *Config) getSlice() *[]byte {
 
 // packetListener gets raw packets from the UDP socket and sends them to another go routine.
 func (c *Config) packetListener(idx uint) {
-	c.Printf("Starting UDP packet listener %d.", idx)
+	c.Printf("Starting UDP packet listener %d, max packet size: %d bytes", idx, c.BufferPacket)
 
 	var err error
 
@@ -65,7 +65,7 @@ func (c *Config) packetListener(idx uint) {
 // packetProcessor receives packets from packetReader using a buffered channel.
 // This procedure launches the packet handler.
 func (c *Config) packetProcessor(idx uint) {
-	c.Printf("Starting UDP packet processor %d.", idx)
+	c.Printf("Starting UDP packet processor %d, channel size: %d", idx, len(c.packets))
 	defer c.Printf("Closing UDP packet processor %d.", idx)
 
 	for packet := range c.packets {

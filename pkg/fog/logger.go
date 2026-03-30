@@ -42,7 +42,7 @@ func (c *Config) setupLogs() {
 }
 
 // Debugf writes log lines... to stdout and/or a file.
-func (c *Config) Debugf(msg string, v ...interface{}) {
+func (c *Config) Debugf(msg string, v ...any) {
 	if !c.Debug {
 		return
 	}
@@ -51,12 +51,12 @@ func (c *Config) Debugf(msg string, v ...interface{}) {
 }
 
 // Printf writes log lines... to stdout and/or a file.
-func (c *Config) Printf(msg string, v ...interface{}) {
+func (c *Config) Printf(msg string, v ...any) {
 	c.log.Printf("[INFO] "+msg, v...)
 }
 
 // Errorf writes log lines... to stdout and/or a file.
-func (c *Config) Errorf(msg string, v ...interface{}) {
+func (c *Config) Errorf(msg string, v ...any) {
 	c.metrics.Errors.Inc()
 	c.log.Printf("[ERROR] "+msg, v...)
 }

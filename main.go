@@ -13,6 +13,7 @@ import (
 
 func main() {
 	configFile := flag.String("config", "/config/fog.conf", "config file path")
+
 	flag.Parse()
 
 	// Load configuration file.
