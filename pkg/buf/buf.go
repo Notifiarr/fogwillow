@@ -68,7 +68,17 @@ func (f *FileBuffer) Write(data []byte) (int, error) {
 
 // Len returns the length of the file buffer.
 func (f *FileBuffer) Len() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	return f.buf.Len()
+}
+
+// ReturnToPool resets the buffer and returns it to the pool unconditionally.
+// Only call this when the buffer was obtained from NewBufferFromPool and will not be used again.
+func (f *FileBuffer) ReturnToPool() {
+	f.buf.Reset()
+	bufferPool.Put(f)
 }
 
 // FlusOpts allows passing data into the file flusher.

@@ -2,6 +2,7 @@
 package willow
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/Notifiarr/fogwillow/pkg/buf"
@@ -40,14 +41,17 @@ type Logger interface {
 
 // Willow is the working struct for this module. Get one from, NeWillow().
 type Willow struct {
-	config *Config
-	memory map[string]*buf.FileBuffer // The file buffer memory map.
-	delCh  chan string                // This channel is used by Delete().
-	askCh  chan string                // This channel it used by Get().
-	repCh  chan *buf.FileBuffer       // This is the response channel for Get().
-	setCh  chan *buf.FileBuffer       // This channel is used by Set().
-	fsOp   chan *flush                // This channel is used to make file system changes.
-	fsDone chan struct{}              // This channel is used to close fs workers.
+	config   *Config
+	memory   map[string]*buf.FileBuffer // The file buffer memory map.
+	memLen   atomic.Int64               // Mirrors len(memory); safe to read from any goroutine.
+	delCh    chan string                // This channel is used by Delete().
+	askCh    chan string                // This channel it used by Get().
+	repCh    chan *buf.FileBuffer       // This is the response channel for Get().
+	setCh    chan *buf.FileBuffer       // This channel is used by Set().
+	tryCh    chan *buf.FileBuffer       // This channel is used by TrySet().
+	tryRepCh chan *buf.FileBuffer       // This is the response channel for TrySet().
+	fsOp     chan *flush                // This channel is used to make file system changes.
+	fsDone   chan struct{}              // This channel is used to close fs workers.
 }
 
 const (
@@ -61,14 +65,16 @@ func NeWillow(config *Config) *Willow {
 	config.setup()
 
 	return &Willow{
-		config: config,
-		memory: make(map[string]*buf.FileBuffer, memoryMapSize),
-		askCh:  make(chan string),
-		delCh:  make(chan string),
-		repCh:  make(chan *buf.FileBuffer),
-		setCh:  make(chan *buf.FileBuffer),
-		fsOp:   make(chan *flush, config.BufferFileSys),
-		fsDone: make(chan struct{}),
+		config:   config,
+		memory:   make(map[string]*buf.FileBuffer, memoryMapSize),
+		askCh:    make(chan string),
+		delCh:    make(chan string),
+		repCh:    make(chan *buf.FileBuffer),
+		setCh:    make(chan *buf.FileBuffer),
+		tryCh:    make(chan *buf.FileBuffer),
+		tryRepCh: make(chan *buf.FileBuffer),
+		fsOp:     make(chan *flush, config.BufferFileSys),
+		fsDone:   make(chan struct{}),
 	}
 }
 
