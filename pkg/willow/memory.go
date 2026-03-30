@@ -7,7 +7,6 @@ import (
 )
 
 // Len returns the number of file buffers in the map.
-// Safe to call from any goroutine.
 func (w *Willow) Len() int {
 	return int(w.memLen.Load())
 }
@@ -85,7 +84,7 @@ func (w *Willow) washer(now time.Time, force bool) {
 	}
 }
 
-// trySet is the memoryHole-internal implementation of TrySet.
+// trySet is the internal implementation of TrySet.
 // Returns nil when candidate was stored, or the existing buffer when the path was already taken.
 func (w *Willow) trySet(candidate *buf.FileBuffer) *buf.FileBuffer {
 	if existing, ok := w.memory[candidate.Path]; ok {
