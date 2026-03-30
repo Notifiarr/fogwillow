@@ -193,7 +193,7 @@ func (p *packet) parse(settings Settings) ([]byte, error) {
 				ErrInvalidPacket, settingCount, p.addr.IP, newline, lastline, line)
 		}
 
-		settings.Set(string(key), string(val))
+		settings.Set(string(key), val)
 
 		lastline += newline + 1 // +1 to remove the \n
 	}
