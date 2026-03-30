@@ -3,7 +3,13 @@ package fog
 import (
 	"path/filepath"
 	"strings"
+	"sync"
 )
+
+// settingsPool reuses Settings maps across packets to avoid a per-packet allocation.
+var settingsPool = sync.Pool{ //nolint:gochecknoglobals
+	New: func() any { return make(Settings, 4) }, //nolint:mnd
+}
 
 // List of settings the app recognizes from packet parsing.
 const (
@@ -22,6 +28,15 @@ type setting string
 // Set a setting in the map.
 func (s Settings) Set(key, val string) {
 	s[key] = setting(val)
+}
+
+// resetAndReturn clears all keys and returns the map to the pool for reuse.
+func (s Settings) resetAndReturn() {
+	for k := range s {
+		delete(s, k)
+	}
+
+	settingsPool.Put(s)
 }
 
 // ValidFilepath returns false if there is no file path setting or it contains bad stuff.

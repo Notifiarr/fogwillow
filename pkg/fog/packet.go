@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"strings"
 
 	"github.com/Notifiarr/fogwillow/pkg/buf"
 )
@@ -86,7 +85,10 @@ func (c *Config) packetProcessor(idx uint) {
 // Handler is invoked by packetListener for every received packet.
 // This is where the packet is parsed and stored into memory for later flushing to disk.
 func (p *packet) Handler() {
-	settings, body, err := p.parse()
+	settings := settingsPool.Get().(Settings) //nolint:forcetypeassert
+	defer settings.resetAndReturn()
+
+	body, err := p.parse(settings)
 	if err != nil {
 		p.Errorf("%v", err)
 		return
@@ -151,49 +153,52 @@ func (p *packet) getOrWrite(filePath string, body []byte) *buf.FileBuffer {
 	}
 
 	_, err := existing.Write(body)
-	if err != nil { //nolint:noinlineerr
+	if err != nil {
 		p.Errorf("Adding %d bytes to buffer (%d) for %s", p.size, existing.Len(), filePath)
 	}
 
 	return existing
 }
 
-// parse the packet into structured data.
-func (p *packet) parse() (Settings, []byte, error) {
+// parse populates settings from the packet header and returns the body.
+// settings must be an empty map obtained from the caller (typically via settingsPool).
+func (p *packet) parse(settings Settings) ([]byte, error) {
 	newline := bytes.IndexByte(*p.data, '\n')
 	if newline < 0 {
-		return nil, nil, fmt.Errorf("%w from %s (first newline at %d)", ErrInvalidPacket, p.addr.IP, newline)
+		return nil, fmt.Errorf("%w from %s (first newline at %d)", ErrInvalidPacket, p.addr.IP, newline)
 	}
 
 	// Turn the first line into a number. That number tells us how many more lines to parse. Usually 1 to 3.
 	settingCount, err := strconv.Atoi(string((*p.data)[0:newline]))
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: from %s (first newline at %d, prior value: %s)",
+		return nil, fmt.Errorf("%w: from %s (first newline at %d, prior value: %s)",
 			err, p.addr.IP, newline, string((*p.data)[0:newline]))
 	}
 
-	settings := make(Settings, settingCount)
 	lastline := newline + 1 // +1 to remove the \n
-	// Parse each line 1 at a time and add them to the settings map.
-	for ; settingCount > 0; settingCount-- {
+	// Parse each setting line: "key=value\n"
+	for range settingCount {
 		newline = bytes.IndexByte((*p.data)[lastline:], '\n')
 		if newline < 0 {
-			return nil, nil, fmt.Errorf("%w with %d settings from %s (newline/lastline: %d/%d): missing first newline",
-				ErrInvalidPacket, settingCount+len(settings), p.addr.IP, newline, lastline)
+			return nil, fmt.Errorf("%w with %d settings from %s (newline/lastline: %d/%d): missing first newline",
+				ErrInvalidPacket, settingCount, p.addr.IP, newline, lastline)
 		}
-		// Split the setting line on = to get name and value.
-		settingVal := strings.SplitN(string((*p.data)[lastline:newline+lastline]), "=", 2) //nolint:mnd
-		if len(settingVal) != 2 {                                                          //nolint:mnd
-			return nil, nil, fmt.Errorf("%w with %d settings from %s (newline/lastline: %d/%d): setting '%s' missing equal",
-				ErrInvalidPacket, settingCount+len(settings), p.addr.IP, newline, lastline, settingVal[0])
+
+		// Split on '=' without converting the line to a string first.
+		line := (*p.data)[lastline : newline+lastline]
+		key, val, ok := bytes.Cut(line, []byte("="))
+
+		if !ok {
+			return nil, fmt.Errorf("%w with %d settings from %s (newline/lastline: %d/%d): setting '%s' missing equal",
+				ErrInvalidPacket, settingCount, p.addr.IP, newline, lastline, line)
 		}
-		// Set the name and value.
-		settings.Set(settingVal[0], settingVal[1])
-		// Increment lastline and repeat.
+
+		settings.Set(string(key), string(val))
+
 		lastline += newline + 1 // +1 to remove the \n
 	}
 
-	return settings, (*p.data)[lastline:p.size], nil
+	return (*p.data)[lastline:p.size], nil
 }
 
 // check the packet for valid settings.

@@ -92,14 +92,16 @@ func (c *Config) Start() error {
 
 	c.willow.Start()
 
-	for i := c.Processors; i > 0; i-- {
+	for idx := range c.Processors {
 		c.processorWg.Add(1)
-		go c.packetProcessor(i)
+
+		go c.packetProcessor(idx)
 	}
 
-	for i := c.Listeners; i > 0; i-- {
+	for idx := range c.Listeners {
 		c.listenerWg.Add(1)
-		go c.packetListener(i)
+
+		go c.packetListener(idx)
 	}
 
 	smx := http.NewServeMux()
