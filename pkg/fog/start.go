@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Notifiarr/fogwillow/pkg/api"
 	"github.com/Notifiarr/fogwillow/pkg/buf"
 	"github.com/Notifiarr/fogwillow/pkg/httpserver"
 	"github.com/Notifiarr/fogwillow/pkg/metrics"
@@ -102,7 +103,8 @@ func (c *Config) Start() error {
 		go c.packetListener(idx)
 	}
 
-	c.httpSrv = httpserver.New(c.HTTPServer, nil)
+	fogAPI := api.New(c.OutputPath, c.Password)
+	c.httpSrv = httpserver.New(c.HTTPServer, fogAPI.Register)
 
 	err = c.httpSrv.ListenAndServe()
 	if err != nil {

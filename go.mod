@@ -3,6 +3,8 @@ module github.com/Notifiarr/fogwillow
 go 1.26.1
 
 require (
+	github.com/gorilla/mux v1.8.1
+	github.com/lestrrat-go/apache-logformat/v2 v2.0.6
 	github.com/prometheus/client_golang v1.23.2
 	golift.io/cnfg v0.2.5
 	golift.io/cnfgfile v0.0.0-20240713024420-a5436d84eb48
@@ -13,9 +15,10 @@ require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/golang/mock v1.7.0-rc.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/lestrrat-go/strftime v1.1.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.20.1 // indirect
