@@ -24,7 +24,8 @@ type Config struct {
 	TLSKeyPath        string        `toml:"tls_key_path"        xml:"tls_key_path"`
 }
 
-func defaultConfig() *Config {
+// DefaultConfig returns the default configuration for the HTTP server.
+func DefaultConfig() *Config {
 	return &Config{
 		ListenAddr:        DefaultListenAddr,
 		ReadTimeout:       DefaultReadTimeout,
@@ -35,24 +36,29 @@ func defaultConfig() *Config {
 	}
 }
 
-func validateConfig(config *Config) {
-	if config.ReadTimeout <= 0 {
-		config.ReadTimeout = DefaultReadTimeout
+// Setup fills empty listen address and any zero timeouts or limits so logs and runtime match.
+func (c *Config) Setup() {
+	if c.ListenAddr == "" {
+		c.ListenAddr = DefaultListenAddr
 	}
 
-	if config.ReadHeaderTimeout <= 0 {
-		config.ReadHeaderTimeout = DefaultReadHeaderTimeout
+	if c.ReadTimeout <= 0 {
+		c.ReadTimeout = DefaultReadTimeout
 	}
 
-	if config.WriteTimeout <= 0 {
-		config.WriteTimeout = DefaultWriteTimeout
+	if c.ReadHeaderTimeout <= 0 {
+		c.ReadHeaderTimeout = DefaultReadHeaderTimeout
 	}
 
-	if config.IdleTimeout <= 0 {
-		config.IdleTimeout = DefaultIdleTimeout
+	if c.WriteTimeout <= 0 {
+		c.WriteTimeout = DefaultWriteTimeout
 	}
 
-	if config.MaxHeaderBytes <= 0 {
-		config.MaxHeaderBytes = DefaultMaxHeaderBytes
+	if c.IdleTimeout <= 0 {
+		c.IdleTimeout = DefaultIdleTimeout
+	}
+
+	if c.MaxHeaderBytes <= 0 {
+		c.MaxHeaderBytes = DefaultMaxHeaderBytes
 	}
 }

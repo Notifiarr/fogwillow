@@ -23,10 +23,10 @@ type Server struct {
 // to the same mux (e.g. mux.Handle("/api/", apiHandler)). /metrics is always registered.
 func New(config *Config, register func(mux *http.ServeMux)) *Server {
 	if config == nil {
-		config = defaultConfig()
+		config = DefaultConfig()
 	}
 
-	validateConfig(config)
+	config.Setup()
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())

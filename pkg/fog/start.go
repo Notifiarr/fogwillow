@@ -57,7 +57,7 @@ type Config struct {
 func LoadConfigFile(path string) (*Config, error) {
 	config := &Config{
 		OutputPath:   DefaultOutputPath,
-		HTTPServer:   &httpserver.Config{ListenAddr: httpserver.DefaultListenAddr},
+		HTTPServer:   httpserver.DefaultConfig(),
 		BufferUDP:    DefaultUDPBuffer,
 		BufferPacket: DefaultPacketBuffer,
 		BufferChan:   DefaultChanBuffer,
@@ -136,17 +136,23 @@ func (c *Config) setup() {
 	c.Logger = c
 	c.Metrics = c.metrics
 	c.willow = willow.NeWillow(c.Config)
+
+	if c.HTTPServer == nil {
+		c.HTTPServer = httpserver.DefaultConfig()
+	}
+
+	c.HTTPServer.Setup()
 }
 
 func (c *Config) setupSocket() error {
-	addr, err := net.ResolveUDPAddr("udp", c.HTTPServer.ListenAddr)
+	addr, err := net.ResolveUDPAddr("udp", c.ListenAddr)
 	if err != nil {
-		return fmt.Errorf("invalid listen_addr provided: %w", err)
+		return fmt.Errorf("invalid udp listen_addr: %w", err)
 	}
 
 	c.sock, err = net.ListenUDP("udp", addr)
 	if err != nil {
-		return fmt.Errorf("unable to use provided listen_addr: %w", err)
+		return fmt.Errorf("unable to use udp listen_addr: %w", err)
 	}
 
 	err = c.sock.SetReadBuffer(int(c.BufferUDP)) //nolint:gosec

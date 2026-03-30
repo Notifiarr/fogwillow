@@ -64,10 +64,22 @@ func (c *Config) Errorf(msg string, v ...any) {
 // printConfig logs the current configuration information.
 func (c *Config) printConfig() {
 	c.Printf("=> Fog Willow Starting, pid: %d", os.Getpid())
-	c.Printf("=> Listen Address / Password: %s / %v", c.ListenAddr, c.Password != "")
+	c.Printf("=> UDP Listen Address / Password: %s / %v", c.ListenAddr, c.Password != "")
+
+	if c.HTTPServer.TLSCertPath != "" && c.HTTPServer.TLSKeyPath != "" {
+		c.Printf("=> HTTPS Listen Address: %s (Cert=%s, Key=%s)", c.HTTPServer.ListenAddr, c.HTTPServer.TLSCertPath, c.HTTPServer.TLSKeyPath)
+	} else {
+		c.Printf("=> HTTP Listen Address: %s", c.HTTPServer.ListenAddr)
+	}
+
+	c.Printf("=> HTTP Server; Read/Header/Write/Idle: %s/%s/%s/%s, Max Header Bytes: %d",
+		c.HTTPServer.ReadTimeout, c.HTTPServer.ReadHeaderTimeout, c.HTTPServer.WriteTimeout,
+		c.HTTPServer.IdleTimeout, c.HTTPServer.MaxHeaderBytes)
+
 	c.Printf("=> Output Path: %s", c.OutputPath)
 	c.Printf("=> Intervals; Flush/Group: %s/%s", c.FlushInterval, c.GroupInterval)
 	c.Printf("=> Buffers; UDP/Packet/Chan/FS: %d/%d/%d/%d", c.BufferUDP, c.BufferPacket, c.BufferChan, c.BufferFileSys)
+	c.Printf("=> Buffer Pool (File Buffers): %v", c.BufferPool)
 	c.Printf("=> Threads; Listen/Process/Writer: %d/%d/%d", c.Listeners, c.Processors, c.Writers)
 
 	if c.LogFile != "" {
