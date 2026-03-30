@@ -35,6 +35,8 @@ func (c *Config) getSlice() *[]byte {
 
 // packetListener gets raw packets from the UDP socket and sends them to another go routine.
 func (c *Config) packetListener(idx uint) {
+	defer c.listenerWg.Done()
+
 	c.Printf("Starting UDP packet listener %d, max packet size: %d bytes", idx, c.BufferPacket)
 
 	var err error
@@ -65,6 +67,8 @@ func (c *Config) packetListener(idx uint) {
 // packetProcessor receives packets from packetReader using a buffered channel.
 // This procedure launches the packet handler.
 func (c *Config) packetProcessor(idx uint) {
+	defer c.processorWg.Done()
+
 	c.Printf("Starting UDP packet processor %d, channel size: %d", idx, len(c.packets))
 	defer c.Printf("Closing UDP packet processor %d.", idx)
 
@@ -96,16 +100,7 @@ func (p *packet) Handler() {
 
 	// Combine our base path with the filename path provided in the packet.
 	filePath := settings.Filepath(p.OutputPath)
-	fileBuffer := p.willow.Get(filePath)
-
-	if fileBuffer == nil {
-		// Create a new fileBuffer.
-		fileBuffer = p.newBuf(filePath, body)
-		// Save the new file buffer in the map.
-		p.willow.Set(fileBuffer)
-	} else if _, err := fileBuffer.Write(body); err != nil { //nolint:noinlineerr // Append directly to existing buffer.
-		p.Errorf("Adding %d bytes to buffer (%d) for %s", p.size, fileBuffer.Len(), filePath)
-	}
+	fileBuffer := p.getOrWrite(filePath, body)
 
 	switch {
 	case settings.Delete():
@@ -124,6 +119,43 @@ func (p *packet) Handler() {
 			Type:     "eof",
 		})
 	}
+}
+
+// getOrWrite returns the file buffer for the given path, writing body into it.
+// If no buffer exists for the path it creates one via TrySet; if another
+// processor wins the race for the same path the candidate is discarded and
+// body is written into the winning buffer instead.
+func (p *packet) getOrWrite(filePath string, body []byte) *buf.FileBuffer {
+	if fileBuffer := p.willow.Get(filePath); fileBuffer != nil {
+		_, err := fileBuffer.Write(body)
+		if err != nil {
+			p.Errorf("Adding %d bytes to buffer (%d) for %s", p.size, fileBuffer.Len(), filePath)
+		}
+
+		return fileBuffer
+	}
+
+	// No existing buffer; create a candidate with body already written.
+	candidate := p.newBuf(filePath, body)
+
+	// Atomically store it. TrySet returns nil on success, or the winning buffer
+	// when another processor stored the same path between our Get and TrySet.
+	existing := p.willow.TrySet(candidate)
+	if existing == nil {
+		return candidate
+	}
+
+	// Lost the race: discard the candidate and write body into the winner.
+	if p.BufferPool {
+		candidate.ReturnToPool()
+	}
+
+	_, err := existing.Write(body)
+	if err != nil { //nolint:noinlineerr
+		p.Errorf("Adding %d bytes to buffer (%d) for %s", p.size, existing.Len(), filePath)
+	}
+
+	return existing
 }
 
 // parse the packet into structured data.

@@ -51,6 +51,8 @@ type Config struct {
 	httpSrv      *http.Server
 	newBuf       func(path string, data []byte) *buf.FileBuffer
 	bytesPool    sync.Pool
+	listenerWg   sync.WaitGroup
+	processorWg  sync.WaitGroup
 }
 
 // LoadConfigFile does what its name implies.
@@ -91,10 +93,12 @@ func (c *Config) Start() error {
 	c.willow.Start()
 
 	for i := c.Processors; i > 0; i-- {
+		c.processorWg.Add(1)
 		go c.packetProcessor(i)
 	}
 
 	for i := c.Listeners; i > 0; i-- {
+		c.listenerWg.Add(1)
 		go c.packetListener(i)
 	}
 
@@ -165,9 +169,14 @@ func (c *Config) setupSocket() error {
 
 // Shutdown stops the application.
 func (c *Config) Shutdown() error {
-	// Stop accepting packets.
+	// Stop accepting packets; wait for all listeners to finish
+	// before closing the channel to avoid a send-on-closed-channel panic.
 	c.sock.Close()
+	c.listenerWg.Wait()
 	close(c.packets)
+	// Wait for all processors to finish their current Handler() call before
+	// stopping, so no goroutine calls our methods after shutdown.
+	c.processorWg.Wait()
 	// Flush all file buffers to disk.
 	c.willow.Stop()
 
