@@ -29,9 +29,9 @@ func (e *statusError) Error() string {
 	return e.Msg
 }
 
-// putFileHandler handles PUT /api/file/{path} and writes the request body to that path.
+// uploadHandler handles PUT /api/file/{path} and writes the request body to that path.
 // Parent directories are created as needed. Wildcards are not permitted.
-func (a *API) putFileHandler(resp http.ResponseWriter, req *http.Request) {
+func (a *API) uploadHandler(resp http.ResponseWriter, req *http.Request) {
 	var se *statusError
 	switch relPath, created, err := a.writeUploadedFile(mux.Vars(req)["path"], req.Body); {
 	case errors.As(err, &se):
