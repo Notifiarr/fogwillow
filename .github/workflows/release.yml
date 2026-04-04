@@ -1,17 +1,15 @@
 name: build-and-release
 on:
   push:
-    branches: [ 'main' ]
     tags: [ 'v*.*.*' ]
   pull_request:
-    branches: [ 'main' ]
+    branches: [ 'main', 'unstable' ]
 
 permissions:
   contents: read
 
 jobs:
   release:
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
     outputs:
       version: ${{ steps.release.outputs.version }}
     name: Make Release Assets
@@ -42,7 +40,7 @@ jobs:
           name: release
           path: release
 
-  deploy-nonpublic-packagecloud:
+  deploy-release-packagecloud:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: release
     name: Deploy Nonpublic PackageCloud
@@ -54,7 +52,23 @@ jobs:
           name: release
       - uses: golift/upload-packagecloud@v1.1
         with:
-          userrepo: golift/nonpublic
+          userrepo: golift/pkgs
+          apitoken: ${{ secrets.PACKAGECLOUD_TOKEN }}
+          packages: .
+          debdists: ubuntu/focal
+  deploy-unstable-packagecloud:
+    if: github.ref == 'refs/heads/unstable'
+    needs: release
+    name: Deploy Unstable PackageCloud
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release files
+        uses: actions/download-artifact@v8
+        with:
+          name: release
+      - uses: golift/upload-packagecloud@v1.1
+        with:
+          userrepo: golift/unstable
           apitoken: ${{ secrets.PACKAGECLOUD_TOKEN }}
           packages: .
           debdists: ubuntu/focal

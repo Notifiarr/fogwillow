@@ -14,21 +14,22 @@ const (
 	LogFileMode = 0o644
 	// Apache Combined Log Format: host ident user time "request" status bytes "referer" "user-agent".
 	CombinedLogFormat = `%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"`
+	MaxStupidValue    = uint(9999999) // for comparing with config.
 )
 
 // newAccessLog creates a rotating access log writer from config.
 // Returns nil when AccessLog is empty, disabling access logging.
 func newAccessLog(config *Config) *rotatorr.Logger {
-	if config.AccessLog == "" || config.AccessLogMB < 0 || config.AccessLogFiles < 0 {
+	if config.AccessLog == "" {
 		return nil
 	}
 
 	return rotatorr.NewMust(&rotatorr.Config{
 		Filepath: config.AccessLog,
-		FileSize: config.AccessLogMB * OneMB,
+		FileSize: int64(config.AccessLogMB * OneMB), //nolint:gosec // size is protected by config.
 		FileMode: LogFileMode,
 		Rotatorr: &timerotator.Layout{
-			FileCount: config.AccessLogFiles,
+			FileCount: int(config.AccessLogFiles), //nolint:gosec // count is protected by config.
 		},
 	})
 }

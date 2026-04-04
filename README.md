@@ -65,8 +65,9 @@ function socket_put_contents($socket, $outputfile, $line, $host, $length = 8000)
 
 ## Usage
 
-We run this from a Docker container directly on a Synology NAS. Using this image:<br/>
-`ghcr.io/Notifiarr/fogwillow:main`
+We run this from a Docker container directly on a Synology NAS. Using this image:
+
+- `ghcr.io/Notifiarr/fogwillow:main`
 
 Mount `/config` and give it a `/config/fog.conf` file that looks like the
 [example](https://github.com/Notifiarr/fogwillow/blob/main/fog.conf).

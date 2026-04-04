@@ -10,8 +10,6 @@ const (
 	DefaultWriteTimeout      = 10 * time.Second
 	DefaultIdleTimeout       = 120 * time.Second
 	DefaultMaxHeaderBytes    = 1 << 16 // 64KB
-	DefaultAccessLogMB       = 1 << 22 // 4MB
-	DefaultAccessLogFiles    = 10      // 10 files
 	OneMB                    = 1 << 20 // 1 MB, used for calculations.
 )
 
@@ -68,11 +66,11 @@ func (c *Config) Setup() {
 		c.MaxHeaderBytes = DefaultMaxHeaderBytes
 	}
 
-	if c.AccessLogFiles == 0 {
-		c.AccessLogFiles = DefaultAccessLogFiles
+	if c.AccessLogFiles > MaxStupidValue {
+		c.AccessLogFiles = MaxStupidValue
 	}
 
-	if c.AccessLogMB == 0 {
-		c.AccessLogMB = DefaultAccessLogMB
+	if c.AccessLogMB > MaxStupidValue {
+		c.AccessLogMB = MaxStupidValue
 	}
 }

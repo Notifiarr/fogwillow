@@ -24,7 +24,6 @@ const (
 	DefaultUDPBuffer    = 1 << 22 // 4MB
 	DefaultPacketBuffer = 1 << 18 // 256KB
 	DefaultChanBuffer   = 1 << 15 // 32 thousand
-	MaxStupidValue      = uint(9999999)
 )
 
 // Config is the input _and_ running data.
@@ -118,32 +117,32 @@ func (c *Config) Start() error {
 // setup makes sure configurations are sound and sane.
 func (c *Config) setup() {
 	// Protect uint->int64 conversions.
-	if c.LogFileMB > MaxStupidValue {
-		c.LogFileMB = MaxStupidValue
+	if c.LogFileMB > httpserver.MaxStupidValue {
+		c.LogFileMB = httpserver.MaxStupidValue
 	}
 
-	if c.LogFiles > MaxStupidValue {
-		c.LogFiles = MaxStupidValue
+	if c.LogFiles > httpserver.MaxStupidValue {
+		c.LogFiles = httpserver.MaxStupidValue
 	}
 
-	if c.HTTPServer.AccessLogMB > MaxStupidValue {
-		c.HTTPServer.AccessLogMB = MaxStupidValue
+	if c.HTTPServer.AccessLogMB > httpserver.MaxStupidValue {
+		c.HTTPServer.AccessLogMB = httpserver.MaxStupidValue
 	}
 
-	if c.HTTPServer.AccessLogFiles > MaxStupidValue {
-		c.HTTPServer.AccessLogFiles = MaxStupidValue
+	if c.HTTPServer.AccessLogFiles > httpserver.MaxStupidValue {
+		c.HTTPServer.AccessLogFiles = httpserver.MaxStupidValue
 	}
 
 	if c.Processors < 1 {
 		c.Processors = 1
-	} else if c.Processors > MaxStupidValue {
-		c.Processors = MaxStupidValue
+	} else if c.Processors > httpserver.MaxStupidValue {
+		c.Processors = httpserver.MaxStupidValue
 	}
 
 	if c.Listeners < 1 {
 		c.Listeners = 1
-	} else if c.Listeners > MaxStupidValue {
-		c.Listeners = MaxStupidValue
+	} else if c.Listeners > httpserver.MaxStupidValue {
+		c.Listeners = httpserver.MaxStupidValue
 	}
 
 	if c.newBuf = buf.NewBuffer; c.BufferPool {
