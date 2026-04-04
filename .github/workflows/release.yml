@@ -1,9 +1,10 @@
 name: build-and-release
 on:
   push:
+    branches: [ 'main' ]
     tags: [ 'v*.*.*' ]
   pull_request:
-    branches: [ 'main', 'unstable' ]
+    branches: [ 'unstable' ]
 
 permissions:
   contents: read
