@@ -9,11 +9,11 @@ import (
 	"golift.io/rotatorr/timerotator"
 )
 
-// Apache Combined Log Format: host ident user time "request" status bytes "referer" "user-agent".
 const (
-	combinedLogFormat  = `%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"`
-	accessLogFileMode  = 0o644
-	accessLogMegabytes = 1 << 21 // 2MB
+	// Access log file mode.
+	LogFileMode = 0o644
+	// Apache Combined Log Format: host ident user time "request" status bytes "referer" "user-agent".
+	CombinedLogFormat = `%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"`
 )
 
 // newAccessLog creates a rotating access log writer from config.
@@ -25,8 +25,8 @@ func newAccessLog(config *Config) *rotatorr.Logger {
 
 	return rotatorr.NewMust(&rotatorr.Config{
 		Filepath: config.AccessLog,
-		FileSize: config.AccessLogMB * accessLogMegabytes,
-		FileMode: accessLogFileMode,
+		FileSize: config.AccessLogMB * OneMB,
+		FileMode: LogFileMode,
 		Rotatorr: &timerotator.Layout{
 			FileCount: config.AccessLogFiles,
 		},
@@ -41,7 +41,7 @@ func wrapWithAccessLog(handler http.Handler, logger *rotatorr.Logger) http.Handl
 		return handler
 	}
 
-	apache, err := apachelog.New(combinedLogFormat)
+	apache, err := apachelog.New(CombinedLogFormat)
 	if err != nil {
 		panic(fmt.Sprintf("building apache access log format: %v", err))
 	}

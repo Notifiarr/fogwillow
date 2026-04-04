@@ -12,6 +12,7 @@ const (
 	DefaultMaxHeaderBytes    = 1 << 16 // 64KB
 	DefaultAccessLogMB       = 1 << 22 // 4MB
 	DefaultAccessLogFiles    = 10      // 10 files
+	OneMB                    = 1 << 20 // 1 MB, used for calculations.
 )
 
 // Config is the configuration for the HTTP server.
@@ -25,8 +26,8 @@ type Config struct {
 	TLSCertPath       string        `toml:"tls_cert_path"       xml:"tls_cert_path"`
 	TLSKeyPath        string        `toml:"tls_key_path"        xml:"tls_key_path"`
 	AccessLog         string        `toml:"access_log"          xml:"access_log"`
-	AccessLogMB       int64         `toml:"access_log_mb"       xml:"access_log_mb"`
-	AccessLogFiles    int           `toml:"access_log_files"    xml:"access_log_files"`
+	AccessLogMB       uint          `toml:"access_log_mb"       xml:"access_log_mb"`
+	AccessLogFiles    uint          `toml:"access_log_files"    xml:"access_log_files"`
 }
 
 // DefaultConfig returns the default configuration for the HTTP server.

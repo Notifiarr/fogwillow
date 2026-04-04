@@ -4,16 +4,12 @@ import (
 	"log"
 	"os"
 
+	"github.com/Notifiarr/fogwillow/pkg/httpserver"
 	"golift.io/rotatorr"
 	"golift.io/rotatorr/timerotator"
 )
 
 // This file is for the fogwillow log file. Not logs it processes from the network.
-
-const (
-	logFileMode = 0o644
-	megabyte    = 1024 * 1024
-)
 
 // setupLogs starts the logs rotation and sets logger output to the configured file(s).
 func (c *Config) setupLogs() {
@@ -30,10 +26,10 @@ func (c *Config) setupLogs() {
 
 	rotator = rotatorr.NewMust(&rotatorr.Config{
 		Filepath: c.LogFile,
-		FileSize: int64(c.LogFileMB * megabyte), //nolint:gosec
-		FileMode: logFileMode,
+		FileSize: int64(c.LogFileMB * httpserver.OneMB), //nolint:gosec // size is protected by config.
+		FileMode: httpserver.LogFileMode,                // borrow this type.
 		Rotatorr: &timerotator.Layout{
-			FileCount:  int(c.LogFiles), //nolint:gosec
+			FileCount:  int(c.LogFiles), //nolint:gosec // count is protected by config.
 			PostRotate: postRotate,
 		},
 	})

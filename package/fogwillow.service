@@ -8,6 +8,7 @@ After=network-online.target
 ExecStart=/usr/bin/fogwillow -config /etc/fogwillow/fog.conf
 EnvironmentFile=-/etc/default/fogwillow
 Environment=FW_LOG_FILE=/var/log/fogwillow/fog.log
+Environment=FW_HTTP_SERVER_ACCESS_LOG=/var/log/fogwillow/access.log
 Restart=always
 RestartSec=10
 SyslogIdentifier=fogwillow
