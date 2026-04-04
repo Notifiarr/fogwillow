@@ -10,11 +10,12 @@ import (
 )
 
 const (
-	// Access log file mode.
+	// LogFileMode is the mode for the access log file.
 	LogFileMode = 0o644
-	// Apache Combined Log Format: host ident user time "request" status bytes "referer" "user-agent".
+	// CombinedLogFormat is from Apache: host ident user time "request" status bytes "referer" "user-agent".
 	CombinedLogFormat = `%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"`
-	MaxStupidValue    = uint(9999999) // for comparing with config.
+	// MaxStupidValue is a stupid big value for minimizing config inputs.
+	MaxStupidValue = uint(9999999) // for comparing with config.
 )
 
 // newAccessLog creates a rotating access log writer from config.

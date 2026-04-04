@@ -115,7 +115,7 @@ func (c *Config) Start() error {
 }
 
 // setup makes sure configurations are sound and sane.
-func (c *Config) setup() {
+func (c *Config) setup() { //nolint:cyclop
 	// Protect uint->int64 conversions.
 	if c.LogFileMB > httpserver.MaxStupidValue {
 		c.LogFileMB = httpserver.MaxStupidValue

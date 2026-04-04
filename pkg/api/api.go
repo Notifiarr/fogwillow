@@ -1,4 +1,4 @@
-// Package api provides an HTTP API for listing, fetching, and deleting files
+// Package api provides an HTTP API for listing, fetching, uploading, and deleting files
 // written by the UDP ingest path. All operations are scoped to output_path.
 package api
 
@@ -24,18 +24,19 @@ func New(outputPath, password string) *API {
 	}
 }
 
-// Register mounts all API routes onto smuthe server muxx and is intended to be passed as the
+// Register mounts all API routes onto the server mux and is intended to be passed as the
 // register callback to httpserver.New.
 func (a *API) Register(smx *http.ServeMux) {
 	router := mux.NewRouter()
-	apiRouter := router.PathPrefix("/api").Subrouter()
+	apiRouter := router.PathPrefix("/api/").Subrouter()
 	apiRouter.Use(a.authenticate)
 
-	apiRouter.HandleFunc("/list/{path:.+}", a.listHandler).Methods(http.MethodGet)
-	apiRouter.HandleFunc("/file/{path:.+}", a.fileHandler).Methods(http.MethodGet)
-	apiRouter.HandleFunc("/all", a.deleteAllHandler).Methods(http.MethodDelete)
-	apiRouter.HandleFunc("/{path:.+}", a.deleteHandler).Methods(http.MethodDelete)
+	apiRouter.HandleFunc("/list/{path:.+}", a.listHandler).Methods(http.MethodGet)      // /api/list/some/path
+	apiRouter.HandleFunc("/file/{path:.+}", a.fileHandler).Methods(http.MethodGet)      // /api/file/some/path
+	apiRouter.HandleFunc("/file/{path:.+}", a.putFileHandler).Methods(http.MethodPut)   // /api/file/some/path
+	apiRouter.HandleFunc("/all", a.deleteAllHandler).Methods(http.MethodDelete)         // /api/all
+	apiRouter.HandleFunc("/glob/{path:.+}", a.deleteHandler).Methods(http.MethodDelete) // /api/glob/some/path
 
 	smx.Handle("/api/", router)
-	smx.Handle("/api", router)
+	smx.Handle("/api", router) // this 404s.
 }

@@ -111,7 +111,7 @@ func (a *API) fileHandler(resp http.ResponseWriter, req *http.Request) {
 	http.ServeContent(resp, req, info.Name(), info.ModTime(), fileHandle)
 }
 
-// deleteHandler handles DELETE /api/{path} and removes all files or directories
+// deleteHandler handles DELETE /api/glob/{path} and removes all files or directories
 // matching the path. The path may contain * wildcards in any segment.
 func (a *API) deleteHandler(resp http.ResponseWriter, r *http.Request) {
 	rawPath := mux.Vars(r)["path"]
