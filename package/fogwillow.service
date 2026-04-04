@@ -1,0 +1,17 @@
+# Systemd service unit for fogwillow.
+[Unit]
+Description=fogwillow - High performance UDP logger.
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/fogwillow -c /etc/fogwillow/fog.conf
+EnvironmentFile=-/etc/default/fogwillow
+Restart=always
+RestartSec=10
+SyslogIdentifier=fogwillow
+Type=simple
+WorkingDirectory=/tmp
+
+[Install]
+WantedBy=multi-user.target

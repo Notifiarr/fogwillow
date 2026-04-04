@@ -144,14 +144,13 @@ func (a *API) deleteHandler(resp http.ResponseWriter, r *http.Request) {
 // When the pattern contains no wildcard it returns the pattern if it exists.
 func (a *API) resolveForDelete(pattern string) ([]string, error) {
 	if !strings.ContainsRune(pattern, '*') {
-		_, statErr := os.Stat(pattern)
-
-		if errors.Is(statErr, os.ErrNotExist) {
+		_, err := os.Stat(pattern)
+		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
 		}
 
-		if statErr != nil {
-			return nil, fmt.Errorf("stat: %w", statErr)
+		if err != nil {
+			return nil, fmt.Errorf("stat: %w", err)
 		}
 
 		return []string{pattern}, nil
