@@ -26,7 +26,6 @@ read -r -d '' PACKAGE_ARGS <<- PACKAGE_ARGS
     --after-install package/after-install.sh
     --before-install package/before-install.sh
     --before-remove package/before-remove.sh
-    --deb-no-default-config-files
     --description='${DESC}'
     --iteration ${ITERATION}
     --license ${LICENSE}
