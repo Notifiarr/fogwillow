@@ -43,6 +43,7 @@ jobs:
           path: release
 
   deploy-nonpublic-packagecloud:
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: release
     name: Deploy Nonpublic PackageCloud
     runs-on: ubuntu-latest
