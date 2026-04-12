@@ -39,9 +39,9 @@ func (a *API) uploadHandler(resp http.ResponseWriter, req *http.Request) {
 	case err != nil:
 		writeError(resp, http.StatusInternalServerError, err.Error())
 	case created:
-		writeJSON(resp, http.StatusCreated, map[string]string{"path": relPath})
+		writeJSON(resp, http.StatusCreated, map[string]string{"path": relPath}, "created")
 	default:
-		writeJSON(resp, http.StatusOK, map[string]string{"path": relPath})
+		writeJSON(resp, http.StatusOK, map[string]string{"path": relPath}, "updated")
 	}
 }
 
