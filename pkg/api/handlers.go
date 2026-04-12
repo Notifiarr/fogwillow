@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -66,7 +67,7 @@ func (a *API) listHandler(resp http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	writeJSON(resp, http.StatusOK, entries)
+	writeJSON(resp, http.StatusOK, entries, strconv.Itoa(len(entries))+" entries")
 }
 
 // fileHandler handles GET /api/file/{path} and streams the file contents.
@@ -137,7 +138,7 @@ func (a *API) deleteHandler(resp http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(resp, http.StatusOK, DeleteResult{Deleted: len(deleted), Paths: deleted})
+	writeJSON(resp, http.StatusOK, DeleteResult{Deleted: len(deleted), Paths: deleted}, strconv.Itoa(len(deleted))+" deleted")
 }
 
 // resolveForDelete returns the filesystem paths to act on for the given pattern.
@@ -177,15 +178,19 @@ func (a *API) deleteAllHandler(resp http.ResponseWriter, _ *http.Request) {
 		}
 	}
 
-	writeJSON(resp, http.StatusOK, map[string]int{"deleted": count})
+	writeJSON(resp, http.StatusOK, DeleteResult{Deleted: count, Paths: []string{a.outputPath}}, strconv.Itoa(count)+" deleted")
 }
 
 // writeJSON writes data as a JSON response body with the given status code.
-func writeJSON(resp http.ResponseWriter, status int, data any) {
+func writeJSON(resp http.ResponseWriter, status int, data any, info string) {
 	body, err := json.Marshal(data)
 	if err != nil {
 		http.Error(resp, `{"error":"internal server error"}`, http.StatusInternalServerError)
 		return
+	}
+
+	if info != "" {
+		resp.Header().Set("X-Info", info)
 	}
 
 	resp.Header().Set("Content-Type", "application/json")
@@ -195,5 +200,12 @@ func writeJSON(resp http.ResponseWriter, status int, data any) {
 
 // writeError writes a JSON error response.
 func writeError(resp http.ResponseWriter, status int, msg string) {
-	writeJSON(resp, status, map[string]string{"error": msg})
+	const maxInfoLength = 100
+
+	info := strings.TrimSpace(msg)
+	if len(info) > maxInfoLength {
+		info = info[:maxInfoLength] + "..."
+	}
+
+	writeJSON(resp, status, map[string]string{"error": msg}, info)
 }

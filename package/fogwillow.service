@@ -1,6 +1,6 @@
 # Systemd service unit for fogwillow.
 [Unit]
-Description=fogwillow - High performance UDP logger.
+Description=fogwillow - High performance UDP->File logger. Like a syslogd server.
 Wants=network-online.target
 After=network-online.target
 
