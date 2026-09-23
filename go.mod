@@ -7,7 +7,7 @@ require (
 	github.com/lestrrat-go/apache-logformat/v2 v2.0.6
 	github.com/prometheus/client_golang v1.23.2
 	golift.io/cnfg v0.2.5
-	golift.io/cnfgfile v0.0.0-20240713024420-a5436d84eb48
+	golift.io/cnfgfile v0.1.0
 	golift.io/rotatorr v0.0.0-20260217050959-f6ac6fc7b38e
 )
 
